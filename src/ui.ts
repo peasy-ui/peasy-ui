@@ -148,7 +148,8 @@ export class UI {
   }
 
   public static resolveProperty(object: any, property: string): { target: any; property: string } {
-    const properties = property.split('.');
+    property = property.replace('[', '.').replace(']', '.');
+    const properties = property.split('.').filter(prop => (prop ?? '').length > 0);
     let target = object;
     while (properties.length > 1) {
       target = target[properties.shift()];
