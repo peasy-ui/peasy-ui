@@ -14,7 +14,7 @@ export class UIBinding {
   public context: any;
   public selector: string | Element | Node;
   public attribute: string;
-  public value: string; // A fixed value that's always used
+  public value: string | Element; // A fixed value that's always used
 
   public fromUI: boolean | fromUICallback = false;
   public toUI: boolean | toUICallback = true;
@@ -111,7 +111,7 @@ export class UIBinding {
   public updateAtEvents(): void {
     let event = this.events.shift();
     while (event != null) {
-      console.log('UPDATED', this.attribute, event, this.object);
+      // console.log('UPDATED', this.attribute, event, this.object);
       const { target, property } = UI.resolveProperty(this.object, this.property);
       const callback = target[property];
       callback(event, this.object, this.element, this.attribute);
@@ -120,7 +120,7 @@ export class UIBinding {
   }
 
   triggerAtEvent = (event): void => {
-    console.log('TRIGGERED', this.attribute, event, this.object);
+    // console.log('TRIGGERED', this.attribute, event, this.object);
     this.events.push(event);
   }
 }

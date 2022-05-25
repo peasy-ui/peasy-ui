@@ -19,7 +19,7 @@ input {
 
 .ball {
   display: inline-block;
-  position: relative;
+  position: absolute;
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -57,3 +57,46 @@ input {
   align-items: center;
   justify-content: center;
 }
+/* 
+.slots {
+  position:relative;
+  border: 1px solid black;
+  padding: 5px;
+  border-radius: 3px;
+  height: 20px;
+}
+
+.slot {
+  display: inline-block;
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  text-align: center;
+  transition-duration: 500ms;
+}
+
+.slot-0 {
+  transition-delay: 100ms;
+  transform: translate3d(-25px, 0px, 0px);
+}
+.slot-1 {
+  transition-delay: 200ms;
+  transform: translate3d(0px, 0px, 0px);
+}
+.slot-2 {
+  transition-delay: 300ms;
+  transform: translate3d(25px, 0px, 0px);
+}
+.slot-3 {
+  transition-delay: 400ms;
+  transform: translate3d(50px, 0px, 0px);
+}
+.slot-4 {
+  transition-delay: 500ms;
+  transform: translate3d(75px, 0px, 0px);
+}
+.slot-5 {
+  transition-delay: 600ms;
+  transform: translate3d(100px, 0px, 0px);
+} */
