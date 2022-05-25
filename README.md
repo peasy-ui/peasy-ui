@@ -67,6 +67,8 @@ Peasy UI uses the JavaScript/Typescript string interpolation syntax of `${ }` in
     ${'value' ==> prop} One-way binding from element to model property, used to bind
                         values of radio buttons and select inputs to a model property
 
+    ${ ==> prop}        One-time binding that stores DOM element in model property
+
 A combination of the string value binding and a binding for the `change` event can be used to capture and react to changes in radio buttons and selects.
 
 ```ts
