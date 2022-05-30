@@ -9,21 +9,25 @@ export class UI {
 
   public static leaveAttributes = false;
 
-  private static regexReplace = /([\S\s]*?)\$\{([^}]*?[<=@]=[=>][^}]*?)\}([\S\s]*)/m;
+  private static regexReplace = /([\S\s]*?)\$\{([^}]*?[<=@]=[*=>][^}]*?)\}([\S\s]*)/m;
+  private static regexAttribute = /^\s*(\S*?)\s*([<=@])=([*=>])\s*(\S*?)\s*$/;
   private static regexValue = /([\S\s]*?)\$\{([\s\S]*?)\}([\S\s]*)/m;
-  private static regexAttribute = /^\s*(\S*?)\s*([<=@])=([=>])\s*(\S*?)\s*$/;
 
   private static bindingCounter = 0;
 
-  public static create(parent: Element, template: string, model = {}): UIView {
+  public static create(parent: Element, template: string | HTMLElement, model = {}, options = { prepare: true, sibling: null }): UIView {
     const view = new UIView();
 
-    const container = document.createElement('div');
-    container.innerHTML = UI.prepare(template);
-    const element = container.firstElementChild as HTMLElement;
-    view.element = element;
-    view.bindings.push(...UI.parse(element, model));
-    parent.appendChild(element);
+    view.model = model;
+    if (typeof template == 'string') {
+      const container = document.createElement('div');
+      container.innerHTML = options.prepare ? UI.prepare(template) : template;
+      view.element = container.firstElementChild as HTMLElement;
+    } else {
+      view.element = template;
+    }
+    view.bindings.push(...UI.parse(view.element, model));
+    parent.insertBefore(view.element, options.sibling);
 
     UI.views.push(view);
     return view;
@@ -51,14 +55,19 @@ export class UI {
         element = clone;
         match = text.match(UI.regexValue);
       }
-    } else {
+    }
+    else {
       bindings.push(...Object.keys(element.attributes ?? []).reverse().map((attribute): UIBinding[] => {
         const bindings: UIBinding[] = [];
+        if (element instanceof Comment) {
+          return [];
+        }
         const attr = element.attributes[attribute];
         if (attr.name.startsWith('pui.')) {
           const match = attr.value.match(UI.regexAttribute);
           let [_ignore, name, toUI, fromUI, value] = match;
           let fixedValue;
+          let template;
           if (toUI !== '@') {
             const fixed = name.match(/^'(.*?)'$/);
             if (fixed != null) {
@@ -71,19 +80,22 @@ export class UI {
               const { target, property } = UI.resolveProperty(object, value);
               target[property] = element;
               // console.log('REF', property, target);
-              if (!UI.leaveAttributes) {
-                element.removeAttribute(attr.name);
-              }
               return [];
+
+            } else if (fromUI === '*') {
+              const comment = document.createComment(attr.name);
+              element.parentNode.insertBefore(comment, element);
+              element.parentNode.removeChild(element);
+              element.removeAttribute(attr.name);
+              template = element;
+              element = comment as unknown as Element;
+
             } else if (name !== 'checked') {
               element.setAttribute(name, '');
             }
           }
-          if (!UI.leaveAttributes) {
-            element.removeAttribute(attr.name);
-          }
           return [UI.bind({
-            selector: element, attribute: name, value: fixedValue, object, property: value,
+            selector: element, attribute: name, value: fixedValue, object, property: value, template,
             toUI: typeof toUI === 'string' ? toUI === '<' : toUI,
             fromUI: typeof fromUI === 'string' ? fromUI === '>' : fromUI,
             atEvent: toUI === '@',
@@ -96,13 +108,12 @@ export class UI {
           const [_ignore, before, property, after] = match;
           bindings.push(UI.bind({
             selector: element, attribute: attr.name, object, property,
-            toUI: (_newValue: any, _oldValue: any, _name: string, model: any): void => {
+            toUI: (newValue: any, _oldValue: any, _name: string, model: any): void => {
               const value = parts.map((part, index) => {
                 if (index % 2 === 0) {
                   return part;
                 }
-                const { target, property } = UI.resolveProperty(model, part);
-                return target[property];
+                return UI.resolveValue(model, part);
               }).join('');
               element.setAttribute(attr.name, value);
             }
@@ -114,123 +125,40 @@ export class UI {
         }
         return bindings;
       }).flat());
+
+      // It's a repeater, clear all bindings except the template
+      if (element instanceof Comment) {
+        return bindings.filter(binding => {
+          if (binding.template != null) {
+            return true;
+          }
+          binding.unbind();
+          return false;
+        });
+      }
+
+      if (!UI.leaveAttributes) {
+        for (let i = Object.keys(element.attributes ?? []).length - 1; i >= 0; i--) {
+          const attr = element.attributes[Object.keys(element.attributes ?? [])[i]];
+          if (attr.name.startsWith('pui.')) {
+            element.removeAttribute(attr.name);
+          }
+        }
+      }
+
       bindings.push(...Array.from(element.childNodes).map(child => UI.parse(child as HTMLElement, object)).flat());
     }
     return bindings;
   }
 
-  // public static parse(element: Element, object: any): UIBinding[] {
-  //   const bindings: UIBinding[] = [];
-  //   const regex = /([\S\s]*?)\$\{([\s\S]*?)\}([\S\s]*)/m;
-  //   if (element.nodeType === 3) { // text
-  //     let text = element.textContent;
-  //     let match = text.match(regex);
-  //     while (match != null) {
-  //       const first = match[1];
-  //       const property = match[2];
-  //       text = match[3];
-
-  //       let clone = element.cloneNode() as Element;
-  //       element.textContent = first;
-  //       element.parentElement.insertBefore(clone, element.nextElementSibling);
-  //       bindings.push(UI.bind({ selector: clone, attribute: 'textContent', object, property }));
-  //       element = clone;
-
-  //       clone = element.cloneNode() as Element;
-  //       clone.textContent = text;
-  //       element.parentElement.insertBefore(clone, element.nextElementSibling);
-  //       element = clone;
-  //       match = text.match(regex);
-  //     }
-  //   } else {
-  //     bindings.push(...Object.keys(element.attributes ?? []).map((attribute): UIBinding[] => {
-  //       const bindings: UIBinding[] = [];
-  //       const attr = element.attributes[attribute];
-  //       let match = attr.name.match(regex);
-  //       if (match != null) {
-  //         match = match[2];
-  //         match = match.match(/^\s*(\S*?)([+-@])-([+-])(\S*?)\s*$/);
-  //         let [_ignore, name, toUI, fromUI, value] = match;
-  //         let fixedValue;
-  //         if (toUI !== '@') {
-  //           const fixed = name.match(/^'(.*?)'$/);
-  //           if (fixed != null) {
-  //             fixedValue = fixed[1];
-  //             element.setAttribute('value', fixedValue);
-  //             name = element.nodeName.toLowerCase() === 'option' ? 'selected' : 'checked';
-  //             fromUI = value => value ? fixedValue : undefined;
-  //             toUI = value => value === fixedValue;
-  //           } else if (name === '') {
-  //             const { target, property } = UI.resolveProperty(object, value);
-  //             target[property] = element;
-  //             // const binding = UI.bind({
-  //             //   selector: element, attribute: 'name', value: element, object, property: value,
-  //             //   toUI: false, fromUI: true, atEvent: false,
-  //             // });
-  //             // binding.updateFromUI(true);
-  //             // UI.unbind(binding);
-  //             return [];
-  //           } else if (name !== 'checked') {
-  //             element.setAttribute(name, '');
-  //           }
-  //         }
-  //         return [UI.bind({
-  //           selector: element, attribute: name, value: fixedValue, object, property: value,
-  //           toUI: typeof toUI === 'string' ? toUI === '+' : toUI,
-  //           fromUI: typeof fromUI === 'string' ? fromUI === '+' : fromUI,
-  //           atEvent: toUI === '@',
-  //         })];
-  //       }
-  //       const parts = [attr.value];
-  //       let index = 0;
-  //       match = parts[index].match(regex);
-  //       while (match != null) {
-  //         const [_ignore, before, property, after] = match;
-  //         bindings.push(UI.bind({
-  //           selector: element, attribute: attr.name, object, property,
-  //           toUI: (_newValue: any, _oldValue: any, _name: string, model: any): void => {
-  //             const value = parts.map((part, index) => {
-  //               if (index % 2 === 0) {
-  //                 return part;
-  //               }
-  //               const { target, property } = UI.resolveProperty(model, part);
-  //               return target[property];
-  //             }).join('');
-  //             element.setAttribute(attr.name, value);
-  //           }
-  //         }));
-  //         parts[index++] = before;
-  //         parts[index++] = property;
-  //         parts[index] = after;
-  //         match = parts[index].match(regex);
-  //       }
-  //       return bindings;
-  //     }).flat());
-  //     bindings.push(...Array.from(element.childNodes).map(child => UI.parse(child as HTMLElement, object)).flat());
-  //   }
-  //   return bindings;
-  // }
-
   public static bind(options: IUIBinding): UIBinding {
-    const binding = new UIBinding();
-    binding.object = options.object;
-    binding.property = options.property;
-    binding.context = options.context ?? document;
-    binding.selector = options.selector;
-    binding.attribute = options.attribute ?? 'innerText';
-    binding.value = options.value ?? binding.value;
-    binding.fromUI = options.fromUI ?? binding.fromUI;
-    binding.toUI = options.toUI ?? binding.toUI;
-    binding.atEvent = options.atEvent ?? binding.atEvent;
-    binding.addListener();
-
+    const binding = UIBinding.create(options);
     UI.uis[binding.id] = binding;
     return binding;
   }
 
   public static unbind(binding: UIBinding): void {
-    binding.element = null;
-    binding.removeListener();
+    binding.destroy();
     delete UI.uis[binding.id];
   }
 
@@ -253,11 +181,22 @@ export class UI {
   public static resolveProperty(object: any, property: string): { target: any; property: string } {
     property = property.replace('[', '.').replace(']', '.');
     const properties = property.split('.').filter(prop => (prop ?? '').length > 0);
-    let target = object;
+    let target = '$model' in object ? object.$model : object;
     while (properties.length > 1) {
       target = target[properties.shift()];
     }
     return { target, property: properties[0] };
+  }
+
+  public static resolveValue(object: any, prop: string): any {
+    let guard = 0;
+    do {
+      const { target, property } = UI.resolveProperty(object, prop);
+      if (property in target) {
+        return target[property];
+      }
+      object = object.$parent;
+    } while (object != null && guard++ < 1000);
   }
 
   private static prepare(template: string): string {
@@ -273,15 +212,6 @@ export class UI {
       match = remaining.match(UI.regexReplace);
     }
     template += remaining;
-
-    // template = original;
-    // template = template
-    //   .replace(/\s*==>\s*/g, '--+')
-    //   .replace(/\s*<==\s*/g, '+--')
-    //   .replace(/\s*<=>\s*/g, '+-+')
-    //   .replace(/\s*@=>\s*/g, '@-+');
-
-    // console.log('TEMPLATE', template);
 
     return template;
   }

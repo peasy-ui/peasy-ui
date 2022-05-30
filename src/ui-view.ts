@@ -2,6 +2,7 @@ import { UI } from "./ui";
 import { UIBinding } from "./ui-binding";
 
 export class UIView {
+  public model: any;
   public element: HTMLElement;
   public bindings: UIBinding[] = [];
 

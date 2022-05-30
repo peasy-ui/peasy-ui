@@ -57,6 +57,29 @@ input {
   align-items: center;
   justify-content: center;
 }
+
+.todos {
+  margin: 10px;
+}
+.todos .input {
+  margin-bottom: 10px;
+}
+.todo {
+  padding: 5px 0px;
+}
+.done-todo {
+  text-decoration: line-through;
+}
+.todo button {
+  float: right;
+  margin-right: 1vw;
+}
+.todos .header {
+  margin-top: 10px;
+  margin-left: 3px;
+  font-weight: bold;
+}
+
 /* 
 .slots {
   position:relative;

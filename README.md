@@ -69,6 +69,9 @@ Peasy UI uses the JavaScript/Typescript string interpolation syntax of `${ }` in
 
     ${ ==> prop}        One-time binding that stores the element in model property
 
+    ${alias <=* list}   One-way bindning from model list property to view template
+                        alias for each item in the list
+
 A combination of the string value binding and a binding for the `change` event can be used to capture and react to changes in radio buttons and selects.
 
 ```ts
@@ -76,7 +79,6 @@ const template = `
     <input type="radio" \${'red' ==> color} \${change @=> changedColor}> Red
     <input type="radio" \${'green' ==> color} \${change @=> changedColor}> Green
     `;
-
 const model = {
     color: 'red';
     changedColor: (event, model) => alert(`Changed color to ${model.color}.`),
@@ -90,11 +92,20 @@ const template = `
         <option \${'green' ==> color}>Green</option>
     </select>
     `;
-
 const model = {
     color: 'red';
     changedColor: (event, model) => alert(`Changed color to ${model.color}.`),
 };
+```
+
+```ts
+const template = `<div \${item <=* list}>Item: \${item}</div>`;
+const model = { list: ['one', 'two', 'three'] };
+```
+
+```ts
+const template = `<div \${object <=* list}>Item: \${object.id}</div>`;
+const model = { list: [{ id: 'one' }, { id: 'two' }, { id: 'three' }] };
 ```
 
 ## Development and contributing
