@@ -69,6 +69,11 @@ Peasy UI uses the JavaScript/Typescript string interpolation syntax of `${ }` in
 
     ${ ==> prop}        One-time binding that stores the element in model property
 
+    ${ === prop}        One-way binding that renders the element if model property
+                        is true
+    ${ !== prop}        One-way binding that renders the element if model property
+                        is false
+
     ${alias <=* list}   One-way bindning from model list property to view template
                         alias for each item in the list
 
@@ -97,6 +102,15 @@ const model = {
     changedColor: (event, model) => alert(`Changed color to ${model.color}.`),
 };
 ```
+
+```ts
+const template = `
+    <div \${ === preferCats}>I prefer cats.</div>
+    <div \${ !== preferDogs}>I DON'T prefer dogs.</div>
+`;
+const model = { preferCats: true, preferDogs: false };
+```
+
 
 ```ts
 const template = `<div \${item <=* list}>Item: \${item}</div>`;

@@ -117,98 +117,115 @@ export class UIBinding {
     }
     let value = UI.resolveValue(this.object, this.property);
     let listChanged = false;
-    if (this.template != null) {
-      if (value == null) {
-        value = [];
-      }
-      const lastValue = this.lastValue ?? [];
-      if (value.length !== lastValue.length) {
-        listChanged = true;
-      } else {
-        for (let i = 0, ii = value.length; i < ii; i++) {
-          if (value[i] !== lastValue[i]) {
-            listChanged = true;
-            break;
+    if (this.template != null) { // Conditional or iterator
+      if (typeof this.attribute === 'boolean') { // Conditional
+        if (value !== this.lastValue) {
+          const uiValue = this.toUI !== true ? (this.toUI as toUICallback)(value, this.lastValue, this.property, this.object) : value;
+          if (uiValue !== undefined && uiValue !== this.lastUIValue) {
+            // console.log('Updating toUI');
+            if (uiValue === this.attribute) {
+              this.uis.push(UI.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, this.object, { prepare: false, sibling: this.element }));
+            } else {
+              const ui = this.uis.pop();
+              ui?.destroy();
+            }
+            this.lastValue = value;
+            this.lastUIValue = uiValue;
           }
         }
-      }
-      if (!listChanged) {
-        return;
-      }
-
-      const uiValue = this.toUI !== true ? (this.toUI as toUICallback)(value, lastValue, this.property, this.object) : value;
-      if (uiValue == null) {
-        return;
-      }
-      const lastUIValue = this.lastUIValue ?? [];
-      let same = 0;
-      for (let i = uiValue.length - 1, j = lastUIValue.length - 1; i >= 0; i--, j--) {
-        if (uiValue[i] === lastUIValue[j]) {
-          same++;
+      } else { // Iterator
+        if (value == null) {
+          value = [];
         }
-        else {
-          break;
+        const lastValue = this.lastValue ?? [];
+        if (value.length !== lastValue.length) {
+          listChanged = true;
+        } else {
+          for (let i = 0, ii = value.length; i < ii; i++) {
+            if (value[i] !== lastValue[i]) {
+              listChanged = true;
+              break;
+            }
+          }
         }
-      }
-      if (same === uiValue.length && uiValue.length === lastUIValue.length) {
+        if (!listChanged) {
           return;
-      }
-      // console.log('Updating toUI');
-      const uis = this.uis.splice(this.uis.length - same);
+        }
 
-      for (let i = uiValue.length - 1 - same, j = lastUIValue.length - 1 - same; i >= 0; i--, j--) {
-        const item = uiValue[i];
-        const lastDoneUI = uis[0];
-        const ui = this.uis.pop();
-        // New ui
-        if (ui == null) {
-          const model = { $model: { [this.attribute]: item }, $parent: this.object };
-          uis.unshift(UI.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, model, { prepare: false, sibling: lastDoneUI?.element ?? this.element }));
-          continue;
+        const uiValue = this.toUI !== true ? (this.toUI as toUICallback)(value, lastValue, this.property, this.object) : value;
+        if (uiValue == null) {
+          return;
         }
-        // The same, continue
-        if (item === ui?.model.$model[this.attribute]) {
-          uis.unshift(ui);
-          continue;
-        }
-        // Old ui is gone
-        const uiItem = ui?.model.$model[this.attribute];
-        let found = false;
-        for (let k = i - 1; k >= 0; k--) {
-          if (uiItem === uiValue[k]) {
-            found = true;
+        const lastUIValue = this.lastUIValue ?? [];
+        let same = 0;
+        for (let i = uiValue.length - 1, j = lastUIValue.length - 1; i >= 0; i--, j--) {
+          if (uiValue[i] === lastUIValue[j]) {
+            same++;
+          }
+          else {
             break;
           }
         }
-        if (!found) {
-          ui.destroy();
-          i++;
-          continue;
+        if (same === uiValue.length && uiValue.length === lastUIValue.length) {
+          return;
         }
-        // Moved ui
-        this.uis.push(ui);
-        found = false;
-        for (let j = 0, jj = this.uis.length - 1; j < jj; j++) {
-          const ui = this.uis[j];
+        // console.log('Updating toUI');
+        const uis = this.uis.splice(this.uis.length - same);
+
+        for (let i = uiValue.length - 1 - same, j = lastUIValue.length - 1 - same; i >= 0; i--, j--) {
+          const item = uiValue[i];
+          const lastDoneUI = uis[0];
+          const ui = this.uis.pop();
+          // New ui
+          if (ui == null) {
+            const model = { $model: { [this.attribute]: item }, $parent: this.object };
+            uis.unshift(UI.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, model, { prepare: false, sibling: lastDoneUI?.element ?? this.element }));
+            continue;
+          }
+          // The same, continue
           if (item === ui?.model.$model[this.attribute]) {
-            uis.unshift(...this.uis.splice(j, 1));
-            const parent = ui.element.parentElement;
-            parent.removeChild(ui.element);
-            parent.insertBefore(ui.element, lastDoneUI?.element)
-            found = true;
-            break;
+            uis.unshift(ui);
+            continue;
+          }
+          // Old ui is gone
+          const uiItem = ui?.model.$model[this.attribute];
+          let found = false;
+          for (let k = i - 1; k >= 0; k--) {
+            if (uiItem === uiValue[k]) {
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            ui.destroy();
+            i++;
+            continue;
+          }
+          // Moved ui
+          this.uis.push(ui);
+          found = false;
+          for (let j = 0, jj = this.uis.length - 1; j < jj; j++) {
+            const ui = this.uis[j];
+            if (item === ui?.model.$model[this.attribute]) {
+              uis.unshift(...this.uis.splice(j, 1));
+              const parent = ui.element.parentElement;
+              parent.removeChild(ui.element);
+              parent.insertBefore(ui.element, lastDoneUI?.element)
+              found = true;
+              break;
+            }
+          }
+          // New ui
+          if (!found) {
+            const model = { $model: { [this.attribute]: item }, $parent: this.object };
+            uis.unshift(UI.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, model, { prepare: false, sibling: lastDoneUI?.element ?? this.element }));
           }
         }
-        // New ui
-        if (!found) {
-          const model = { $model: { [this.attribute]: item }, $parent: this.object };
-          uis.unshift(UI.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, model, { prepare: false, sibling: lastDoneUI?.element ?? this.element }));
-        }
+        this.uis.forEach(ui => ui.destroy());
+        this.uis = uis;
+        this.lastValue = [...value];
+        this.lastUIValue = [...uiValue];
       }
-      this.uis.forEach(ui => ui.destroy());
-      this.uis = uis;
-      this.lastValue = [...value];
-      this.lastUIValue = [...uiValue];
     } else {
       if (value !== this.lastValue) {
         const uiValue = this.toUI !== true ? (this.toUI as toUICallback)(value, this.lastValue, this.property, this.object) : value;

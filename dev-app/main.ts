@@ -33,6 +33,8 @@ function main(): void {
     todos: [],
     get remainingTodos() { return model.todos.filter(todo => !todo.done) },
     get doneTodos() { return model.todos.filter(todo => todo.done) },
+    get hasRemaining() { return model.remainingTodos.length > 0; },
+    get hasDone() { return model.doneTodos.length > 0; },
     addTodo: (_event, model) => {
       model.todos.push({ text: model.todo, done: false });
       model.todo = '';
@@ -53,7 +55,7 @@ function main(): void {
       <div \${item <=* list} style="background-color: \${color};">Item: \${item} <button \${click @=> clicked}>Set to gold (\${item})</button></div>
       List: \${list[1]}
       <div>Color: <input \${value <=> color}> <span>The color is <b>\${color}</b>.</span> <button \${click @=> clicked}>Set to gold</button></div>
-      <div>Checks: <label><input type="checkbox" \${checked <=> left}> Left</label> <label><input type="checkbox" \${checked <=> right}> Right</label> <b>\${left} \${right}</b></div>
+      <div>Checks: <label><input type="checkbox" \${checked <=> left}> Left</label> <label><input type="checkbox" \${checked <=> right}> Right</label> <b>\${left} \${right} <span \${ === left}> Left </span> <span \${ !== right}> Not right </span></b></div>
       <div>Demo: 
         <label><input type="radio" name="demo" \${'card' ==> demo} \${change @=> changed}>Card</label>
         <label><input type="radio" name="demo" \${'ball' ==> demo} \${change @=> changed}>Ball</label> 
@@ -183,9 +185,9 @@ function selectDemo(model, demoUI) {
   const templateTodo = `
     <div class="todos">
       <div class="input"><input \${value <=> todo} \${==> inputElement}> <button \${click @=> addTodo}>Add todo</button></div>
-      <div class="header" >Remaining</div>
+      <div class="header" \${ === hasRemaining}>Remaining</div>
       <div class="todo remaining-todo" \${todo <=* remainingTodos} style="background-color: \${color};"><label><input type="checkbox" \${checked <=> todo.done}> \${todo.text}</label> <button \${click @=> removeTodo}>Remove todo</button></div>
-      <div class="header" >Done</div>
+      <div class="header" \${ === hasDone}>Done</div>
       <div class="todo done-todo" \${todo <=* doneTodos} style="background-color: \${color};"><label><input type="checkbox" \${checked <=> todo.done}> \${todo.text}</label> <button \${click @=> removeTodo}>Remove todo</button></div>
     </div>
     `;

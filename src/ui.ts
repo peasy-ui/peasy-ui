@@ -9,8 +9,8 @@ export class UI {
 
   public static leaveAttributes = false;
 
-  private static regexReplace = /([\S\s]*?)\$\{([^}]*?[<=@]=[*=>][^}]*?)\}([\S\s]*)/m;
-  private static regexAttribute = /^\s*(\S*?)\s*([<=@])=([*=>])\s*(\S*?)\s*$/;
+  private static regexReplace = /([\S\s]*?)\$\{([^}]*?[<=@!]=[*=>][^}]*?)\}([\S\s]*)/m;
+  private static regexAttribute = /^\s*(\S*?)\s*([<=@!])=([*=>])\s*(\S*?)\s*$/;
   private static regexValue = /([\S\s]*?)\$\{([\s\S]*?)\}([\S\s]*)/m;
 
   private static bindingCounter = 0;
@@ -70,26 +70,34 @@ export class UI {
           let template;
           if (toUI !== '@') {
             const fixed = name.match(/^'(.*?)'$/);
-            if (fixed != null) {
+            if (fixed != null) { // 'value' ==> fixed value
               fixedValue = fixed[1];
               element.setAttribute('value', fixedValue);
               name = element.nodeName.toLowerCase() === 'option' ? 'selected' : 'checked';
               fromUI = value => value ? fixedValue : undefined;
               toUI = value => value === fixedValue;
             } else if (name === '') {
-              const { target, property } = UI.resolveProperty(object, value);
-              target[property] = element;
-              // console.log('REF', property, target);
-              return [];
-
-            } else if (fromUI === '*') {
+              if (fromUI === '>') { // ==> reference
+                const { target, property } = UI.resolveProperty(object, value);
+                target[property] = element;
+                return [];
+              } else { // === or !== conditional
+                const comment = document.createComment(attr.name);
+                element.parentNode.insertBefore(comment, element);
+                element.parentNode.removeChild(element);
+                element.removeAttribute(attr.name);
+                template = element;
+                element = comment as unknown as Element;
+                name = toUI === '=';
+                toUI = true;
+              }
+            } else if (fromUI === '*') { // *=> event
               const comment = document.createComment(attr.name);
               element.parentNode.insertBefore(comment, element);
               element.parentNode.removeChild(element);
               element.removeAttribute(attr.name);
               template = element;
               element = comment as unknown as Element;
-
             } else if (name !== 'checked') {
               element.setAttribute(name, '');
             }
