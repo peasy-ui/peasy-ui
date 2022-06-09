@@ -56,25 +56,23 @@ Peasy UI uses the JavaScript/Typescript string interpolation syntax of `${ }` in
 ```
 ### Available bindings
 
+    ${attr <== prop}    Bindning from model property to element attribute
+    ${attr ==> prop}    Bindning from element attribute to model property 
     ${attr <=> prop}    Two-way binding between element attribute and model property
-    ${attr ==> prop}    One-way bindning from element attribute to model property 
-    ${attr <== prop}    One-way bindning from model property to element attribute
 
-    ${prop}             One-way bindning from model property to attribute or text
+    ${prop}             Bindning from model property to attribute or text
 
     ${event @=> method} Event bindning from element attribute to model method
 
-    ${'value' ==> prop} One-way binding from element to model property, used to bind
+    ${'value' ==> prop} Binding from element to model property, used to bind
                         values of radio buttons and select inputs to a model property
 
     ${ ==> prop}        One-time binding that stores the element in model property
 
-    ${ === prop}        One-way binding that renders the element if model property
-                        is true
-    ${ !== prop}        One-way binding that renders the element if model property
-                        is false
+    ${ === prop}        Binding that renders the element if model property is true
+    ${ !== prop}        Binding that renders the element if model property is false
 
-    ${alias <=* list}   One-way bindning from model list property to view template
+    ${alias <=* list}   Bindning from model list property to view template
                         alias for each item in the list
 
 A combination of the string value binding and a binding for the `change` event can be used to capture and react to changes in radio buttons and selects.
