@@ -8,6 +8,7 @@ export type toUICallback = (newValue: any, oldValue: any, property: string, mode
 
 export class UIBinding {
   public id: number;
+  public parent: typeof UI | UIView;
 
   public object: any;
   public property: string;
@@ -21,6 +22,8 @@ export class UIBinding {
   public fromUI: boolean | fromUICallback = false;
   public toUI: boolean | toUICallback = true;
   public atEvent = false;
+  public oneTime = false;
+  public views: UIView[] = [];
 
   private $element: Element;
   private lastValue: any;
@@ -29,7 +32,6 @@ export class UIBinding {
 
   private events: Event[] = [];
 
-  private uis: UIView[] = [];
 
   public constructor() {
     this.id = ++UI.id;
@@ -60,15 +62,25 @@ export class UIBinding {
     binding.fromUI = options.fromUI ?? binding.fromUI;
     binding.toUI = options.toUI ?? binding.toUI;
     binding.atEvent = options.atEvent ?? binding.atEvent;
+    binding.oneTime = options.oneTime ?? binding.oneTime;
+    binding.parent = options.parent ?? UI;
     binding.addListener();
+
+    if (typeof binding.fromUI !== 'boolean') {
+      binding.fromUI = binding.fromUI.bind(binding);
+    }
+    if (typeof binding.toUI !== 'boolean') {
+      binding.toUI = binding.toUI.bind(binding);
+    }
 
     return binding;
   }
 
   public destroy(): void {
+    // console.log('destroy binding', this.element);
     this.element = null;
     this.removeListener();
-    this.uis.forEach(ui => ui.destroy());
+    this.views.forEach(view => view.destroy());
   }
 
   public unbind(): void {
@@ -91,6 +103,7 @@ export class UIBinding {
   public updateFromUI(): void {
     if (this.fromUI === false || this.firstUpdate) {
       this.firstUpdate = false;
+      this.views.forEach(view => view.updateFromUI());
       return;
     }
     const { target, property } = UI.resolveProperty(this.element, this.attribute);
@@ -109,10 +122,12 @@ export class UIBinding {
         this.lastValue = value;
       }
     }
+    this.views.forEach(view => view.updateFromUI());
   }
 
   public updateToUI(): void {
     if (this.toUI === false) {
+      this.views.forEach(view => view.updateToUI());
       return;
     }
     let value = UI.resolveValue(this.object, this.property);
@@ -124,10 +139,10 @@ export class UIBinding {
           if (uiValue !== undefined && uiValue !== this.lastUIValue) {
             // console.log('Updating toUI');
             if (uiValue === this.attribute) {
-              this.uis.push(UI.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, this.object, { prepare: false, sibling: this.element }));
+              this.views.push(UIView.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, this.object, { parent: this, prepare: false, sibling: this.element }));
             } else {
-              const ui = this.uis.pop();
-              ui?.destroy();
+              const view = this.views.pop();
+              view?.destroy();
             }
             this.lastValue = value;
             this.lastUIValue = uiValue;
@@ -149,16 +164,24 @@ export class UIBinding {
           }
         }
         if (!listChanged) {
+          this.views.forEach(view => view.updateToUI());
+          if (this.oneTime) {
+            this.oneTimeDone();
+          }
           return;
         }
 
         const uiValue = this.toUI !== true ? (this.toUI as toUICallback)(value, lastValue, this.property, this.object) : value;
         if (uiValue == null) {
+          this.views.forEach(view => view.updateToUI());
+          if (this.oneTime) {
+            this.oneTimeDone();
+          }
           return;
         }
         const lastUIValue = this.lastUIValue ?? [];
         let same = 0;
-        for (let i = uiValue.length - 1, j = lastUIValue.length - 1; i >= 0; i--, j--) {
+        for (let i = 0, ii = uiValue.length, j = 0; i < ii; i++, j++) {
           if (uiValue[i] === lastUIValue[j]) {
             same++;
           }
@@ -167,62 +190,61 @@ export class UIBinding {
           }
         }
         if (same === uiValue.length && uiValue.length === lastUIValue.length) {
+          this.views.forEach(view => view.updateToUI());
+          if (this.oneTime) {
+            this.oneTimeDone();
+          }
           return;
         }
-        // console.log('Updating toUI');
-        const uis = this.uis.splice(this.uis.length - same);
+        const views = this.views.splice(0, same);
 
-        for (let i = uiValue.length - 1 - same, j = lastUIValue.length - 1 - same; i >= 0; i--, j--) {
+        for (let i = same, ii = uiValue.length, j = same; i < ii; i++, j++) {
           const item = uiValue[i];
-          const lastDoneUI = uis[0];
-          const ui = this.uis.pop();
-          // New ui
-          if (ui == null) {
+          if (typeof item !== 'string') {
+            item.$index = i;
+          }
+          const lastDoneUI = views[views.length - 1];
+          const view = this.views.shift();
+          // New view
+          if (view == null) {
             const model = { $model: { [this.attribute]: item }, $parent: this.object };
-            uis.unshift(UI.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, model, { prepare: false, sibling: lastDoneUI?.element ?? this.element }));
+            views.push(UIView.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, model, { parent: this, prepare: false, sibling: lastDoneUI?.element ?? this.element }));
             continue;
           }
           // The same, continue
-          if (item === ui?.model.$model[this.attribute]) {
-            uis.unshift(ui);
+          if (item === view?.model.$model[this.attribute]) {
+            views.push(view);
+            view.move(lastDoneUI?.element ?? this.element as HTMLElement);
             continue;
           }
-          // Old ui is gone
-          const uiItem = ui?.model.$model[this.attribute];
+          // Old view is gone
+          const uiItem = view?.model.$model[this.attribute];
+          if (!uiValue.slice(i).includes(uiItem)) {
+            view.destroy();
+            i--;
+            continue;
+          }
+          // Moved view
+          this.views.unshift(view);
           let found = false;
-          for (let k = i - 1; k >= 0; k--) {
-            if (uiItem === uiValue[k]) {
+          for (let j = 0, jj = this.views.length; j < jj; j++) {
+            const view = this.views[j];
+            if (item === view?.model.$model[this.attribute]) {
+              views.push(...this.views.splice(j, 1));
+
+              view.move(lastDoneUI?.element ?? this.element as HTMLElement);
               found = true;
               break;
             }
           }
-          if (!found) {
-            ui.destroy();
-            i++;
-            continue;
-          }
-          // Moved ui
-          this.uis.push(ui);
-          found = false;
-          for (let j = 0, jj = this.uis.length - 1; j < jj; j++) {
-            const ui = this.uis[j];
-            if (item === ui?.model.$model[this.attribute]) {
-              uis.unshift(...this.uis.splice(j, 1));
-              const parent = ui.element.parentElement;
-              parent.removeChild(ui.element);
-              parent.insertBefore(ui.element, lastDoneUI?.element)
-              found = true;
-              break;
-            }
-          }
-          // New ui
+          // New view
           if (!found) {
             const model = { $model: { [this.attribute]: item }, $parent: this.object };
-            uis.unshift(UI.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, model, { prepare: false, sibling: lastDoneUI?.element ?? this.element }));
+            views.push(UIView.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, model, { parent: this, prepare: false, sibling: lastDoneUI?.element ?? this.element }));
           }
         }
-        this.uis.forEach(ui => ui.destroy());
-        this.uis = uis;
+        this.views.forEach(view => view.destroy());
+        this.views = views;
         this.lastValue = [...value];
         this.lastUIValue = [...uiValue];
       }
@@ -238,8 +260,21 @@ export class UIBinding {
         }
       }
     }
+    this.views.forEach(view => view.updateToUI());
+    if (this.oneTime) {
+      this.oneTimeDone();
+    }
   }
 
+  public oneTimeDone(): void {
+    this.toUI = false;
+    this.fromUI = false;
+    // if (this.views.length === 0 && // Only remove bindings without children
+    //   this.template == null || typeof this.attribute !== 'boolean' // NOT Conditional
+    // ) {
+    //   this.unbind();
+    // }
+  }
 
   public updateAtEvents(): void {
     let event = this.events.shift();
@@ -250,6 +285,11 @@ export class UIBinding {
       callback(event, this.object.$model, this.element, this.attribute, this.object);
       event = this.events.shift();
     }
+    this.views.forEach(view => view.updateAtEvents());
+  }
+
+  public updateMove(): void {
+    this.views.forEach(view => view.updateMove());
   }
 
   triggerAtEvent = (event): void => {

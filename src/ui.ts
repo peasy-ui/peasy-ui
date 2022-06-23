@@ -1,57 +1,69 @@
+import { UIAnimation } from './ui-animation';
 import { IUIBinding, UIBinding } from "./ui-binding";
 import { UIView } from "./ui-view";
 
 export class UI {
-  public static uis = {};
+  // public static bindings: Record<string, UIBinding> = {};
   public static id = 0;
 
   public static views: UIView[] = [];
+  public static destroyed: UIView[] = [];
+  public static globals = new UIView();
 
   public static leaveAttributes = false;
 
-  private static regexReplace = /([\S\s]*?)\$\{([^}]*?[<=@!]=[*=>][^}]*?)\}([\S\s]*)/m;
-  private static regexAttribute = /^\s*(\S*?)\s*([<=@!])=([*=>])\s*(\S*?)\s*$/;
-  private static regexValue = /([\S\s]*?)\$\{([\s\S]*?)\}([\S\s]*)/m;
+  private static regexReplace = /([\S\s]*?)\$\{([^}]*?[<=@!]=[*=>|][^}]*?)\}([\S\s]*)/m;
+  private static regexAttribute = /^\s*(\S*?)\s*([<=@!])=([*=>|])\s*(\S*?)\s*$/;
+  private static regexValue = /(?<before>[\S\s]*?)\$\{\s*(?<property>[\s\S]*?)\s*\}(?<after>[\S\s]*)/m;
 
   private static bindingCounter = 0;
 
-  public static create(parent: Element, template: string | HTMLElement, model = {}, options = { prepare: true, sibling: null }): UIView {
-    const view = new UIView();
-
-    view.model = model;
+  public static create(parent: HTMLElement, template: string | HTMLElement, model = {}, options = { parent: null, prepare: true, sibling: null }): UIView {
     if (typeof template == 'string') {
       const container = document.createElement('div');
       container.innerHTML = options.prepare ? UI.prepare(template) : template;
-      view.element = container.firstElementChild as HTMLElement;
-    } else {
-      view.element = template;
+      template = container.firstElementChild as HTMLElement;
     }
-    view.bindings.push(...UI.parse(view.element, model));
-    parent.insertBefore(view.element, options.sibling);
-
-    UI.views.push(view);
+    const view = UIView.create(parent, template, model, options);
+    if (view.parent === UI) {
+      UI.views.push(view);
+    }
     return view;
   }
 
-  public static parse(element: Element, object: any): UIBinding[] {
+  public static play(animation: string | UIAnimation, element?: HTMLElement): UIAnimation {
+    if (typeof animation === 'string') {
+      animation = this.globals.animations.find(anim => anim.name === animation).clone();
+      return animation.play(element);
+    }
+    return animation.play();
+  }
+
+  public static parse(element: Element, object: any, parent = null): UIBinding[] {
     const bindings: UIBinding[] = [];
     if (element.nodeType === 3) { // text
       let text = element.textContent;
       let match = text.match(UI.regexValue);
       while (match != null) {
         const first = match[1];
-        const property = match[2];
+        let property = match[2];
         text = match[3];
+
+        let oneTime = false;
+        if (property.startsWith('|')) {
+          oneTime = true;
+          property = property.slice(1).trimStart();
+        }
 
         let clone = element.cloneNode() as Element;
         element.textContent = first;
-        element.parentElement.insertBefore(clone, element.nextElementSibling);
-        bindings.push(UI.bind({ selector: clone, attribute: 'textContent', object, property }));
+        element.parentElement.insertBefore(clone, element.nextSibling);
+        bindings.push(UI.bind({ selector: clone, attribute: 'textContent', object, property, parent, oneTime }));
         element = clone;
 
         clone = element.cloneNode() as Element;
         clone.textContent = text;
-        element.parentElement.insertBefore(clone, element.nextElementSibling);
+        element.parentElement.insertBefore(clone, element.nextSibling);
         element = clone;
         match = text.match(UI.regexValue);
       }
@@ -68,6 +80,7 @@ export class UI {
           let [_ignore, name, toUI, fromUI, value] = match;
           let fixedValue;
           let template;
+          let oneTime = false;
           if (toUI !== '@') {
             const fixed = name.match(/^'(.*?)'$/);
             if (fixed != null) { // 'value' ==> fixed value
@@ -90,6 +103,9 @@ export class UI {
                 element = comment as unknown as Element;
                 name = toUI === '=';
                 toUI = true;
+                if (fromUI === '|') { // ==| or !=| conditional one time
+                  oneTime = true;
+                }
               }
             } else if (fromUI === '*') { // *=> event
               const comment = document.createComment(attr.name);
@@ -98,6 +114,8 @@ export class UI {
               element.removeAttribute(attr.name);
               template = element;
               element = comment as unknown as Element;
+            } else if (fromUI === '|') { // attr ==| prop one time
+              oneTime = true;
             } else if (name !== 'checked') {
               element.setAttribute(name, '');
             }
@@ -107,16 +125,34 @@ export class UI {
             toUI: typeof toUI === 'string' ? toUI === '<' : toUI,
             fromUI: typeof fromUI === 'string' ? fromUI === '>' : fromUI,
             atEvent: toUI === '@',
+            parent,
+            oneTime,
           })];
         }
         const parts = [attr.value];
         let index = 0;
         let match = parts[index].match(UI.regexValue);
         while (match != null) {
-          const [_ignore, before, property, after] = match;
+          let { before, property, after } = match.groups;
+          let oneTime = false;
+          if (property.startsWith('|')) {
+            oneTime = true;
+            property = property.slice(1).trimStart();
+          }
           bindings.push(UI.bind({
-            selector: element, attribute: attr.name, object, property,
-            toUI: (newValue: any, _oldValue: any, _name: string, model: any): void => {
+            selector: element,
+            attribute: attr.name,
+            object, property, oneTime,
+            toUI(newValue: any, _oldValue: any, name: string, model: any): void {
+              if (this.oneTime) {
+                // console.log('PARTS', name, parts, this);
+                const index = parts.indexOf(name);
+                if (index > -1) {
+                  parts[index] = UI.resolveValue(model, name);
+                  parts[index - 1] += parts[index] + parts[index + 1];
+                  parts.splice(index, 2);
+                }
+              }
               const value = parts.map((part, index) => {
                 if (index % 2 === 0) {
                   return part;
@@ -124,7 +160,8 @@ export class UI {
                 return UI.resolveValue(model, part);
               }).join('');
               element.setAttribute(attr.name, value);
-            }
+            },
+            parent,
           }));
           parts[index++] = before;
           parts[index++] = property;
@@ -154,36 +191,55 @@ export class UI {
         }
       }
 
-      bindings.push(...Array.from(element.childNodes).map(child => UI.parse(child as HTMLElement, object)).flat());
+      bindings.push(...Array.from(element.childNodes).map(child => UI.parse(child as HTMLElement, object, parent)).flat());
     }
     return bindings;
   }
 
   public static bind(options: IUIBinding): UIBinding {
     const binding = UIBinding.create(options);
-    UI.uis[binding.id] = binding;
+    // UI.bindings[binding.id] = binding;
     return binding;
   }
 
   public static unbind(binding: UIBinding): void {
     binding.destroy();
-    delete UI.uis[binding.id];
+    // delete UI.bindings[binding.id];
+    if (binding.parent !== UI) {
+      const bindings = (binding.parent as UIView).bindings;
+      const index = bindings.indexOf(binding);
+      if (index > -1) {
+        bindings.splice(index, 1);
+      }
+    }
   }
 
   public static update(): void {
-    // console.log('UI.update', Object.keys(UI.uis).length);
-    for (const id in UI.uis) {
-      const binding = UI.uis[id];
-      binding.updateFromUI();
-    }
-    for (const id in UI.uis) {
-      const binding = UI.uis[id];
-      binding.updateToUI();
-    }
-    for (const id in UI.uis) {
-      const binding = UI.uis[id];
-      binding.updateAtEvents();
-    }
+    // console.log('UI.update', Object.keys(UI.bindings).length);
+    this.views.forEach(view => view.updateFromUI());
+    this.views.forEach(view => view.updateToUI());
+    this.views.forEach(view => view.updateAtEvents());
+
+    const now = performance.now();
+    [...this.views, this.globals].forEach(view => view.updateAnimations(now));
+
+    this.views.forEach(view => {
+      view.updateMove();
+    });
+    this.destroyed.forEach(view => {
+      switch (view.destroyed) {
+        case 'queue':
+          view.destroyed = 'destroy';
+          break;
+        case 'destroy': {
+          view.terminate();
+          const index = this.destroyed.findIndex(destroyed => view === destroyed);
+          if (index > -1) {
+            this.destroyed.splice(index, 1);
+          }
+        }
+      }
+    })
   }
 
   public static resolveProperty(object: any, property: string): { target: any; property: string } {
