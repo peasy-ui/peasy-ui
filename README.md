@@ -57,10 +57,12 @@ Peasy UI uses the JavaScript/Typescript string interpolation syntax of `${ }` in
 ### Available bindings
 
     ${attr <== prop}    Bindning from model property to element attribute
+    ${attr <=| prop}    One-time bindning from model property to element attribute
     ${attr ==> prop}    Bindning from element attribute to model property 
     ${attr <=> prop}    Two-way binding between element attribute and model property
 
     ${prop}             Bindning from model property to attribute or text
+    ${|prop}            One-time bindning from model property to attribute or text
 
     ${event @=> method} Event bindning from element attribute to model method
 
@@ -119,6 +121,10 @@ const model = { list: ['one', 'two', 'three'] };
 const template = `<div \${object <=* list}>Item: \${object.id}</div>`;
 const model = { list: [{ id: 'one' }, { id: 'two' }, { id: 'three' }] };
 ```
+
+### Additional features
+
+Peasy UI will not detach/remove an `UIView` with elements that have an active animation on them, so there's no need to await the end of any removal activations before destroying an `UIView`.
 
 ## Development and contributing
 
