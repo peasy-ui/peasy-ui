@@ -1,26 +1,40 @@
+import { UIAnimation } from './../src/ui-animation';
 import { UI } from "../src/index";
 import 'styles.css';
+import * as Template from './demo.html';
+
+console.log('Template', Template, Template.default);
+
 
 window.addEventListener('DOMContentLoaded', (event) => {
   main();
 });
 
-const balls = 100;
+const balls = 200;
 
-function main(): void {
+async function main(): Promise<void> {
   console.log('Hello, World!');
 
   let demoUI;
 
   const model = {
     color: 'lightgray',
+    drawerMessage: 'Any kind of message',
+    message: '',
+    transitionDuration: 0,
     list: ['one', 'two', 'three'],
     left: false,
     right: true,
     demo: 'card',
-    clicked: (_event, model, _boundElement, _boundEvent) => model.color = 'gold',
-    changed: (_ev, model, element) => {
-      demoUI = selectDemo(model, demoUI);
+    clicked: (_event, model, _boundElement, _boundEvent) => {
+      model.transitionDuration += 2000;
+      model.color = 'gold';
+    },
+    get hasNoColor() { return (this.color.length ?? '') === 0; },
+    changed: async (_ev, model, element) => {
+      model.transitionDuration = 0;
+      model.color = 'lightgreen';
+      demoUI = await selectDemo(model, demoUI);
     },
     card: {
       value: 'The Ace',
@@ -47,19 +61,60 @@ function main(): void {
     },
 
     // slots: [],
+    animationElement: null,
+
+    cards: [],
+    shuffle: (_event, model) => {
+      // const shuffled = shuffle(model.cards);
+      // shuffled.forEach((card, index) => card.$index = index);
+      // setTimeout(() => model.cards = shuffled, 500);
+      model.cards = shuffle(model.cards);
+    },
+
+    drawerUI: null as any,
+    get showDrawer() {
+      return model.message.length > 0 ? 'show-drawer' : '';
+    },
+    async setMessage() {
+      if (model.drawerUI == null) {
+        model.drawerUI = UI.create(document.body, `<div class="drawer \${showDrawer}" \${click @=> clearMessage}>\${message}</div>`, model);
+        await model.drawerUI.attached;
+      }
+      model.message = model.drawerMessage;
+    },
+    clearMessage() {
+      model.message = '';
+      // setTimeout(() => {
+      model.drawerUI.destroy();
+      model.drawerUI = null;
+      // }, 500);
+    },
+
+    maxHp: 100,
+    hp: 50,
+    get barPercentage() {
+      return Math.round(model.hp / model.maxHp * 100);
+    },
+    hpInc() { model.hp += 10; },
+    hpDec() { model.hp -= 10; },
   };
+
+  //       <div \${ ==> stateChanged ==> animationRun }>Stage changed test</div>
 
 
   UI.create(document.body, `
-    <div class="main" style="background-color: \${color};"> 
+    <div class="main" style="background-color: \${|color}; transition-duration: \${|transitionDuration}ms;">
       <div \${item <=* list} style="background-color: \${color};">Item: \${item} <button \${click @=> clicked}>Set to gold (\${item})</button></div>
       List: \${list[1]}
-      <div>Color: <input \${value <=> color}> <span>The color is <b>\${color}</b>.</span> <button \${click @=> clicked}>Set to gold</button></div>
+      <div>Color: <input \${value <=> color}> <span>The color is <b>\${color}</b>.</span> <button \${click @=> clicked} \${disabled <== hasNoColor}>Set to gold</button></div>
+      <div>Message: <input \${value <=> drawerMessage}> <button \${click @=> setMessage}>Show message</button></div>
       <div>Checks: <label><input type="checkbox" \${checked <=> left}> Left</label> <label><input type="checkbox" \${checked <=> right}> Right</label> <b>\${left} \${right} <span \${ === left}> Left </span> <span \${ !== right}> Not right </span></b></div>
       <div>Demo: 
         <label><input type="radio" name="demo" \${'card' ==> demo} \${change @=> changed}>Card</label>
         <label><input type="radio" name="demo" \${'ball' ==> demo} \${change @=> changed}>Ball</label> 
         <label><input type="radio" name="demo" \${'todo' ==> demo} \${change @=> changed}>Todo</label> 
+        <label><input type="radio" name="demo" \${'cards' ==> demo} \${change @=> changed}>Cards</label> 
+        <label><input type="radio" name="demo" \${'bar' ==> demo} \${change @=> changed}>Bar</label> 
         <b>\${demo}</b>
        </div>
       <div>Demo: 
@@ -67,9 +122,12 @@ function main(): void {
           <option \${'card' ==> demo}>Card</option>
           <option \${'ball' ==> demo}>Ball</option>
           <option \${'todo' ==> demo}>Todo</option>
+          <option \${'cards' ==> demo}>Cards</option>
+          <option \${'bar' ==> demo}>bar</option>
         </select>
        <b>\${demo}</b>
       </div>
+      <div \${ ==> animationElement} style="width: 50px; height: 50px; background-color: red; position: relative;">XXXX</div>
    </div>
    `, model);
 
@@ -92,13 +150,22 @@ function main(): void {
   //  `;
   //   UI.create(document.body, templateSlots, model);
 
-  demoUI = selectDemo(model, demoUI);
+  setInterval(() => {
+    for (let i = 0; i < balls; i++) {
+      updateBall(model.balls[i]);
+    }
+
+    UI.update();
+    // console.log(JSON.stringify(model));
+  }, 1000 / 60);
+
+  demoUI = await selectDemo(model, demoUI);
 
   setTimeout(() => model.color = 'blue', 2000);
-  setTimeout(() => {
-    model.demo = 'ball';
-    demoUI = selectDemo(model, demoUI);
-  }, 3000);
+  // setTimeout(() => {
+  //   model.demo = 'ball';
+  //   demoUI = selectDemo(model, demoUI);
+  // }, 3000);
   setTimeout(() => model.color = 'skyblue', 4000);
   // setTimeout(() => model.list = model.list.concat({ id: 'four' }), 6000);
   setTimeout(() => model.list.push('four'), 6000);
@@ -114,14 +181,39 @@ function main(): void {
   //   }, 1000);
   // }, 2000);
 
-  setInterval(() => {
-    for (let i = 0; i < balls; i++) {
-      updateBall(model.balls[i]);
-    }
+  const anim = UIAnimation.create({
+    name: 'change-color',
+    keyframes: [{ backgroundColor: 'green' }],
+    options: {
+      duration: 5000,
+      fill: 'forwards',
+    },
+    blocking: 'block',
+    blockDuration: 1500,
+  });
 
-    UI.update();
-    // console.log(JSON.stringify(model));
-  }, 1000 / 60);
+  setTimeout(() => {
+    // anim.play(model.animationElement);
+    const anim = UI.play('change-color', model.animationElement);
+    UIAnimation.create({
+      element: model.animationElement,
+      keyframes: [{ transform: 'translateX(200px)' }],
+      options: {
+        duration: 2000,
+        fill: 'forwards',
+      },
+    });
+    UIAnimation.create({
+      chain: anim,
+      element: model.animationElement,
+      keyframes: [{ color: 'white', class: 'test-class' }],
+      options: {
+        duration: 2000,
+        fill: 'forwards',
+      },
+    });
+  }, 1000);
+
 }
 
 // function itemsShift(items) {
@@ -154,7 +246,118 @@ function updateBall(ball) {
   }
 }
 
-function selectDemo(model, demoUI) {
+class Card {
+  public constructor(public suit: string, public value: number) { }
+
+  public get name(): string {
+    switch (this.value) {
+      case 1:
+        return 'A';
+      case 11:
+        return 'J';
+      case 12:
+        return 'Q';
+      case 13:
+        return 'K';
+      default:
+        return `${this.value}`;
+    }
+  }
+  public get color(): string {
+    switch (this.suit) {
+      case 'clubs':
+      case 'spades':
+        return 'black';
+      case 'diamonds':
+      case 'hearts':
+        return 'red';
+    }
+  }
+  public get pip(): string {
+    switch (this.suit) {
+      case 'diamonds':
+        return '&#9830;';
+      default:
+        return `&${this.suit};`;
+    }
+  }
+  public get face(): string {
+    switch (this.value) {
+      case 1:
+        return this.pip;
+      default:
+        return this.name;
+    }
+  }
+
+  public get showCorners(): boolean {
+    return this.value >= 4 && this.value <= 10;
+  }
+  public get showOuterCenter(): boolean {
+    return this.value >= 2 && this.value <= 3;
+  }
+  public get showUpperCenter(): boolean {
+    switch (this.value) {
+      case 7:
+      case 8:
+      case 10:
+        return true;
+      default:
+        return false;
+    }
+  }
+  public get showLowerCenter(): boolean {
+    switch (this.value) {
+      case 8:
+      case 10:
+        return true;
+      default:
+        return false;
+    }
+  }
+  public get showHighs(): boolean {
+    switch (this.value) {
+      case 9:
+      case 10:
+        return true;
+      default:
+        return false;
+    }
+  }
+  public get showCenters(): boolean {
+    switch (this.value) {
+      case 6:
+      case 7:
+      case 8:
+        return true;
+      default:
+        return false;
+    }
+  }
+  public get showCenter(): boolean {
+    switch (this.value) {
+      case 3:
+      case 5:
+      case 9:
+        return true;
+      default:
+        return false;
+    }
+  }
+  public get showFace(): boolean {
+    // console.log('showFace', this.suit, this.name, this.value === 1 || this.value >= 11);
+    return this.value === 1 || this.value >= 11;
+  }
+
+  public get x(): number {
+    return ((this as any).$index % 13) * 90;
+  }
+  public get y(): number {
+    return Math.floor((this as any).$index / 13) * 125;
+  }
+}
+
+async function selectDemo(model, demoUI) {
   // console.log('Selecting demo', model.card, model.ball, model.demo);
 
   const templateCard = `
@@ -192,6 +395,58 @@ function selectDemo(model, demoUI) {
     </div>
     `;
 
+  model.cards = [];
+  for (const suit of ['clubs', 'spades', 'diamonds', 'hearts']) {
+    for (let i = 1; i <= 13; i++) {
+      model.cards.push(new Card(suit, i));
+    }
+  }
+
+  const templateCards = `
+    <div style="margin-top: 30px;">
+      <div class="cards">
+        <div class="card" \${card <=* cards} style="color: \${|card.color}; position: absolute; transform: translate3d(\${card.x}px, \${card.y}px, 0);">
+          <div class="value top">\${|card.name} <span \${ innerHTML <=| card.pip }></span></div>
+          <div class="value bottom">\${|card.name} <span \${ innerHTML <=| card.pip }></span></div>
+
+          <div \${ ==| card.showCorners } class="pip" style="grid-row-start: 1; grid-column-start: 1;" \${ innerHTML <=| card.pip }></div>
+          <div \${ ==| card.showOuterCenter } class="pip" style="grid-row-start: 1; grid-column-start: 2;" \${ innerHTML <=| card.pip }></div>
+          <div \${ ==| card.showCorners } class="pip" style="grid-row-start: 1; grid-column-start: 3;" \${ innerHTML <=| card.pip }></div>
+
+          <div \${ ==| card.showUpperCenter } class="pip" style="grid-row-start: 2; grid-column-start: 2;" \${ innerHTML <=| card.pip }></div>
+
+          <div \${ ==| card.showHighs } class="pip" style="grid-row-start: 3; grid-column-start: 1;" \${ innerHTML <=| card.pip }></div>
+          <div \${ ==| card.showHighs } class="pip" style="grid-row-start: 3; grid-column-start: 3;" \${ innerHTML <=| card.pip }></div>
+
+          <div \${ ==| card.showCenters } class="pip" style="grid-row-start: 4; grid-column-start: 1;" \${ innerHTML <=| card.pip }></div>
+          <div \${ ==| card.showCenter } class="pip" style="grid-row-start: 4; grid-column-start: 2;" \${ innerHTML <=| card.pip }></div>
+          <div \${ ==| card.showCenters } class="pip" style="grid-row-start: 4; grid-column-start: 3;" \${ innerHTML <=| card.pip }></div>
+
+          <div \${ ==| card.showHighs } class="pip rotated" style="grid-row-start: 5; grid-column-start: 1;" \${ innerHTML <=| card.pip }></div>
+          <div \${ ==| card.showHighs } class="pip rotated" style="grid-row-start: 5; grid-column-start: 3;" \${ innerHTML <=| card.pip }></div>
+
+          <div \${ ==| card.showLowerCenter } class="pip rotated" style="grid-row-start: 6; grid-column-start: 2;" \${ innerHTML <=| card.pip }></div>
+
+          <div \${ ==| card.showCorners } class="pip rotated" style="grid-row-start: 7; grid-column-start: 1;" \${ innerHTML <=| card.pip }></div>
+          <div \${ ==| card.showOuterCenter } class="pip rotated" style="grid-row-start: 7; grid-column-start: 2;" \${ innerHTML <=| card.pip }></div>
+          <div \${ ==| card.showCorners } class="pip rotated" style="grid-row-start: 7; grid-column-start: 3;" \${ innerHTML <=| card.pip }></div>
+
+          <div \${ ==| card.showFace } class="pip face" \${ innerHTML <=| card.face }></div>
+        </div>
+      </div>
+      <button \${click @=> shuffle} style="top: -25px; position: relative;">Shuffle</button>
+    </div>
+    `;
+
+  const templateBar = `
+    <div>
+      <div class="bar">
+        <div class="status" style="width: \${barPercentage}%;"></div>
+      </div>
+      <div>\${hp}/\${maxHp}&nbsp;&nbsp; <button \${click @=> hpDec}>-</button> <button \${click @=> hpInc}>+</button> </div>
+    </div>
+    `;
+
 
   if (demoUI != null) {
     demoUI.destroy();
@@ -207,6 +462,12 @@ function selectDemo(model, demoUI) {
     case 'todo':
       template = templateTodo;
       break;
+    case 'cards':
+      template = templateCards;
+      break;
+    case 'bar':
+      template = templateBar;
+      break;
   }
   demoUI = UI.create(document.body, template, model);
 
@@ -215,4 +476,23 @@ function selectDemo(model, demoUI) {
 
 function random(min, max) {
   return Math.floor(Math.random() * (max - min) + min);
+}
+
+function shuffle(array) {
+  array = [...array];
+  let currentIndex = array.length, randomIndex;
+
+  // While there remain elements to shuffle.
+  while (currentIndex != 0) {
+
+    // Pick a remaining element.
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+
+    // And swap it with the current element.
+    [array[currentIndex], array[randomIndex]] = [
+      array[randomIndex], array[currentIndex]];
+  }
+
+  return array;
 }
