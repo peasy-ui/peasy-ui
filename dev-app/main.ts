@@ -25,6 +25,7 @@ async function main(): Promise<void> {
     list: ['one', 'two', 'three'],
     left: false,
     right: true,
+    undef: undefined as any,
     demo: 'card',
     clicked: (_event, model, _boundElement, _boundEvent) => {
       model.transitionDuration += 2000;
@@ -108,7 +109,7 @@ async function main(): Promise<void> {
       List: \${list[1]}
       <div>Color: <input \${value <=> color}> <span>The color is <b>\${color}</b>.</span> <button \${click @=> clicked} \${disabled <== hasNoColor}>Set to gold</button></div>
       <div>Message: <input \${value <=> drawerMessage}> <button \${click @=> setMessage}>Show message</button></div>
-      <div>Checks: <label><input type="checkbox" \${checked <=> left}> Left</label> <label><input type="checkbox" \${checked <=> right}> Right</label> <b>\${left} \${right} <span \${ === left}> Left </span> <span \${ !== right}> Not right </span></b></div>
+      <div>Checks: <label><input type="checkbox" \${checked <=> left}> Left</label> <label><input type="checkbox" \${checked <=> right}> Right</label> <b>\${left} \${right} <span \${ === left}> Left </span> <span \${ !== right}> Not right </span></b>  <span \${ !== undef}> Undefined </span>  <span \${ === undef}> Not Undefined </span></div>
       <div>Demo: 
         <label><input type="radio" name="demo" \${'card' ==> demo} \${change @=> changed}>Card</label>
         <label><input type="radio" name="demo" \${'ball' ==> demo} \${change @=> changed}>Ball</label> 
@@ -162,6 +163,8 @@ async function main(): Promise<void> {
   demoUI = await selectDemo(model, demoUI);
 
   setTimeout(() => model.color = 'blue', 2000);
+
+  setTimeout(() => model.undef = 'defined', 3000);
   // setTimeout(() => {
   //   model.demo = 'ball';
   //   demoUI = selectDemo(model, demoUI);

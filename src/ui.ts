@@ -1,5 +1,5 @@
 import { UIAnimation } from './ui-animation';
-import { IUIBinding, UIBinding } from "./ui-binding";
+import { IUIBinding /*, IUIBindingType */, UIBinding } from "./ui-binding";
 import { UIView } from "./ui-view";
 
 export class UI {
@@ -81,9 +81,11 @@ export class UI {
           let fixedValue;
           let template;
           let oneTime = false;
+          // let type: IUIBindingType = '';
           if (toUI !== '@') {
             const fixed = name.match(/^'(.*?)'$/);
             if (fixed != null) { // 'value' ==> fixed value
+              // type = 'fixed-value';
               fixedValue = fixed[1];
               element.setAttribute('value', fixedValue);
               name = element.nodeName.toLowerCase() === 'option' ? 'selected' : 'checked';
@@ -91,10 +93,12 @@ export class UI {
               toUI = value => value === fixedValue;
             } else if (name === '') {
               if (fromUI === '>') { // ==> reference
+                // type = 'reference';
                 const { target, property } = UI.resolveProperty(object, value);
                 target[property] = element;
                 return [];
               } else { // === or !== conditional
+                // type = 'conditional';
                 const comment = document.createComment(attr.name);
                 element.parentNode.insertBefore(comment, element);
                 element.parentNode.removeChild(element);
@@ -108,6 +112,7 @@ export class UI {
                 }
               }
             } else if (fromUI === '*') { // *=> event
+              // type = 'event';
               const comment = document.createComment(attr.name);
               element.parentNode.insertBefore(comment, element);
               element.parentNode.removeChild(element);
@@ -121,7 +126,7 @@ export class UI {
             }
           }
           return [UI.bind({
-            selector: element, attribute: name, value: fixedValue, object, property: value, template,
+            selector: element, attribute: name, value: fixedValue, object, property: value, template, // type,
             toUI: typeof toUI === 'string' ? toUI === '<' : toUI,
             fromUI: typeof fromUI === 'string' ? fromUI === '>' : fromUI,
             atEvent: toUI === '@',

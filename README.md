@@ -71,8 +71,10 @@ Peasy UI uses the JavaScript/Typescript string interpolation syntax of `${ }` in
 
     ${ ==> prop}        One-time binding that stores the element in model property
 
-    ${ === prop}        Binding that renders the element if model property is true
-    ${ !== prop}        Binding that renders the element if model property is false
+    ${ === prop}        Binding that renders the element if model property is not false
+                        and not nullish
+    ${ !== prop}        Binding that renders the element if model property is false or
+                        nullish
 
     ${alias <=* list}   Bindning from model list property to view template
                         alias for each item in the list

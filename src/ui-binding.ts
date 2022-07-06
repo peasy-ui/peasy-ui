@@ -2,6 +2,7 @@ import { UIView } from './ui-view';
 import { UI } from "./ui";
 
 export type IUIBinding = Partial<Omit<UIBinding, 'id'>>;
+// export type IUIBindingType = 'conditional' | 'event' | 'fixed-value' | 'reference' | '';
 
 export type fromUICallback = (newValue: string, oldValue: any, property: string, model: any) => any | void;
 export type toUICallback = (newValue: any, oldValue: any, property: string, model: any) => string | void;
@@ -18,6 +19,8 @@ export class UIBinding {
   public attribute: string;
   public value: string | Element; // A fixed value that's always used
   public template: HTMLElement;
+
+  // public type: IUIBindingType = '';
 
   public fromUI: boolean | fromUICallback = false;
   public toUI: boolean | toUICallback = true;
@@ -134,6 +137,7 @@ export class UIBinding {
     let listChanged = false;
     if (this.template != null) { // Conditional or iterator
       if (typeof this.attribute === 'boolean') { // Conditional
+        value = (value ?? false) === false ? false : true;
         if (value !== this.lastValue) {
           const uiValue = this.toUI !== true ? (this.toUI as toUICallback)(value, this.lastValue, this.property, this.object) : value;
           if (uiValue !== undefined && uiValue !== this.lastUIValue) {
