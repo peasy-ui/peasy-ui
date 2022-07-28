@@ -105,7 +105,7 @@ async function main(): Promise<void> {
 
   UI.create(document.body, `
     <div class="main" style="background-color: \${|color}; transition-duration: \${|transitionDuration}ms;">
-      <div \${item <=* list} style="background-color: \${color};">Item: \${item} <button \${click @=> clicked}>Set to gold (\${item})</button></div>
+      <div \${item <=* list} class="item" style="background-color: \${color};">Item: \${item} <button \${click @=> clicked}>Set to gold (\${item})</button></div>
       List: \${list[1]}
       <div>Color: <input \${value <=> color}> <span>The color is <b>\${color}</b>.</span> <button \${click @=> clicked} \${disabled <== hasNoColor}>Set to gold</button></div>
       <div>Message: <input \${value <=> drawerMessage}> <button \${click @=> setMessage}>Show message</button></div>
@@ -498,4 +498,36 @@ function shuffle(array) {
   }
 
   return array;
+}
+
+class Something {
+  private _left = 0;
+  private _right = 0;
+
+  public get left(): number {
+    return this._left;
+  }
+  public set left(value) {
+    this._left = value;
+  }
+
+  public get right(): number {
+    return this._right;
+  }
+  public set right(value) {
+    this._right = value;
+  }
+
+  public getTotal(): number {
+    return this._left + this._right;
+  }
+}
+
+class SomethingCleaner {
+  public left = 0;
+  public right = 0;
+
+  public get total(): number {
+    return this.left + this.right;
+  }
 }

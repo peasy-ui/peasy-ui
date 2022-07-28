@@ -21,6 +21,34 @@ input {
   border: 2px solid black;
 }
 
+.item.pui-adding {
+  color: green;
+  animation: fade-in 1.5s forwards;
+}
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+.item.pui-removing {
+  color: red;
+  animation: fade-out 1.5s forwards;
+}
+@keyframes fade-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.item.pui-moving {
+  color: orange;
+}
+
 .ball {
   display: inline-block;
   position: absolute;

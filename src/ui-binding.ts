@@ -201,24 +201,28 @@ export class UIBinding {
           return;
         }
         const views = this.views.splice(0, same);
+        let lastDoneUI = views[views.length - 1];
 
         for (let i = same, ii = uiValue.length, j = same; i < ii; i++, j++) {
           const item = uiValue[i];
           if (typeof item !== 'string') {
             item.$index = i;
           }
-          const lastDoneUI = views[views.length - 1];
+          // const lastDoneUI = views[views.length - 1];
           const view = this.views.shift();
           // New view
           if (view == null) {
             const model = { $model: { [this.attribute]: item }, $parent: this.object };
-            views.push(UIView.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, model, { parent: this, prepare: false, sibling: lastDoneUI?.element ?? this.element }));
+            const view = UIView.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, model, { parent: this, prepare: false, sibling: lastDoneUI?.element ?? this.element });
+            views.push(view);
+            lastDoneUI = view;
             continue;
           }
           // The same, continue
           if (item === view?.model.$model[this.attribute]) {
             views.push(view);
             view.move(lastDoneUI?.element ?? this.element as HTMLElement);
+            lastDoneUI = view;
             continue;
           }
           // Old view is gone
@@ -226,6 +230,7 @@ export class UIBinding {
           if (!uiValue.slice(i).includes(uiItem)) {
             view.destroy();
             i--;
+            lastDoneUI = view;
             continue;
           }
           // Moved view
@@ -238,13 +243,16 @@ export class UIBinding {
 
               view.move(lastDoneUI?.element ?? this.element as HTMLElement);
               found = true;
+              lastDoneUI = view;
               break;
             }
           }
           // New view
           if (!found) {
             const model = { $model: { [this.attribute]: item }, $parent: this.object };
-            views.push(UIView.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, model, { parent: this, prepare: false, sibling: lastDoneUI?.element ?? this.element }));
+            const view = UIView.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, model, { parent: this, prepare: false, sibling: lastDoneUI?.element ?? this.element });
+            views.push(view);
+            lastDoneUI = view;
           }
         }
         this.views.forEach(view => view.destroy());
