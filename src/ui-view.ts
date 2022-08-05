@@ -46,8 +46,9 @@ export class UIView {
   public terminate(): void {
     // console.log('[view] terminate', this.element, this.model, this.element.getAnimations({ subtree: true }));
     Promise.all(
-      this.element.getAnimations({ subtree: true })
-        .map(animation => animation.finished)
+      this.getAnimations()
+      // this.element.getAnimations({ subtree: true })
+      //   .map(animation => animation.finished)
     ).then(() => {
       // console.log('[view] remove', this.element, this.element.getAnimations({ subtree: true }));
       this.element.parentElement?.removeChild(this.element);
@@ -95,8 +96,10 @@ export class UIView {
         this.state = 'attaching';
         break;
       case 'attaching':
-        if (this.element.getAnimations({ subtree: false })
-          .filter(animation => animation.playState !== 'finished').length === 0
+        if (
+          this.getAnimations(false).length === 0
+          // this.element.getAnimations({ subtree: false })
+          // .filter(animation => animation.playState !== 'finished').length === 0
         ) {
           this.element.classList.remove('pui-adding');
           this.state = 'attached';
@@ -142,9 +145,10 @@ export class UIView {
         //   this.element.getAnimations({ subtree: true })
         //     .map(animation => animation.finished)
         // ).then(() => {
-        if (this.element.getAnimations({ subtree: true }).length === 0) {
+        // if (this.element.getAnimations({ subtree: true }).length === 0) {
+        if (this.getAnimations().length === 0) {
           const parent = this.element.parentElement;
-          // console.log('[view] moving', this.element.nextSibling === this.sibling.nextSibling, this.element.nextSibling, this.sibling.nextSibling)
+          console.log('[view] moving', this.element.nextSibling === this.sibling.nextSibling, '>', (this.element.nextSibling as any).cloneNode(), '<', (this.sibling.nextSibling as any).innerText)
           parent.insertBefore(this.element, this.sibling.nextSibling);
           this.element.classList.remove('pui-moving');
           this.moved = '';
@@ -154,5 +158,11 @@ export class UIView {
         break;
     }
     this.bindings.forEach(binding => binding.updateMove());
+  }
+
+  private getAnimations(subtree = true) {
+    return this.element.getAnimations({ subtree })
+      .filter(animation => animation.playState !== 'finished' && animation.effect.getTiming().iterations !== Infinity)
+      .map(animation => animation.finished)
   }
 }
