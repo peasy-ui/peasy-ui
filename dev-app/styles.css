@@ -21,9 +21,11 @@ input {
   border: 2px solid black;
 }
 
-.item.pui-adding {
-  color: green;
-  animation: fade-in 1.5s forwards;
+.item.pui-adding,
+.todo.pui-adding,
+.header.pui-adding {
+  /* color: green; */
+  animation: fade-in 1s forwards;
 }
 @keyframes fade-in {
   0% {
@@ -33,9 +35,11 @@ input {
     opacity: 1;
   }
 }
-.item.pui-removing {
-  color: red;
-  animation: fade-out 1.5s forwards;
+.item.pui-removing,
+.todo.pui-removing,
+.header.pui-removing {
+  /* color: red; */
+  animation: fade-out 1s forwards;
 }
 @keyframes fade-out {
   0% {

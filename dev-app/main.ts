@@ -18,6 +18,10 @@ async function main(): Promise<void> {
   let demoUI;
 
   const model = {
+    players: [
+      { name: 'asdf', colors: ['red', 'green'] },
+      { name: 'qwer', colors: ['blue', 'yellow'] },
+    ],
     color: 'lightgray',
     drawerMessage: 'Any kind of message',
     message: '',
@@ -105,6 +109,11 @@ async function main(): Promise<void> {
 
   UI.create(document.body, `
     <div class="main" style="background-color: \${|color}; transition-duration: \${|transitionDuration}ms;">
+      <div \${player <=* players}>
+        <div>Name: \${player.name}</div>
+        <div>Colors: <span \${playerColor <=* player.colors}> (\${player.name}) \${playerColor} </span></div>
+      </div>
+      <\${ MyComponent <== }/>
       <div \${item <=* list} class="item" style="background-color: \${color};">Item: \${item} <button \${click @=> clicked}>Set to gold (\${item})</button></div>
       List: \${list[1]}
       <div>Color: <input \${value <=> color}> <span>The color is <b>\${color}</b>.</span> <button \${click @=> clicked} \${disabled <== hasNoColor}>Set to gold</button></div>
@@ -171,7 +180,7 @@ async function main(): Promise<void> {
   // }, 3000);
   setTimeout(() => model.color = 'skyblue', 4000);
   // setTimeout(() => model.list = model.list.concat({ id: 'four' }), 6000);
-  setTimeout(() => model.list.push('four'), 6000);
+  setTimeout(() => { model.list.push('four'); model.list.push('five') }, 6000);
   setTimeout(() => { const list = model.list;[list[1], list[2]] = [list[2], list[1]]; }, 7000);
   setTimeout(() => { model.list = model.list.filter(item => item !== 'three') }, 8000);
 

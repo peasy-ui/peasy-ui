@@ -261,7 +261,7 @@ export class UI {
     let guard = 0;
     do {
       const { target, property } = UI.resolveProperty(object, prop);
-      if (property in target) {
+      if (target != null && property in target) {
         return target[property];
       }
       object = object.$parent;
