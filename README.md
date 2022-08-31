@@ -40,12 +40,26 @@ and `import` it into whichever files you want to use it
 import { UI } from 'peasy-ui';
 ```
 
-If you don't have a build process or don't want to install it, use a `script` tag
+If you don't have a build process or don't want to install it, use a `script` tag of type `module` and import from `https://cdn.skypack.dev/peasy-ui` instead.
 
 ```html
-<script src="https://unpkg.com/peasy-ui">
+<html>
+<body>
+  <script type="module">
+    import { UI } from "https://cdn.skypack.dev/peasy-ui";
+
+    const template = '<div>${greeting} (Been running for ${timer} seconds.)</div>';
+    const model = { greeting: 'Hello, World!', timer: -1 };
+    UI.create(document.body, template, model);
+
+    setInterval(() => {
+      model.timer++;
+      UI.update();
+    }, 1000);
+  </script>
+</body>
+</html>
 ```
-to make `UI` available.
 
 ## Features and syntax
 

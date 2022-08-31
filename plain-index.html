@@ -1,0 +1,18 @@
+<html>
+
+<body>
+  <script type="module">
+    import { UI } from "https://cdn.skypack.dev/peasy-ui";
+
+    const template = '<div>${greeting} (Been running for ${timer} seconds.)</div>';
+    const model = { greeting: 'Hello, World!', timer: -1 };
+    UI.create(document.body, template, model);
+
+    setInterval(() => {
+      model.timer++;
+      UI.update();
+    }, 1000);
+  </script>
+</body>
+
+</html>
