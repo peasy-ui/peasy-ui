@@ -20,7 +20,11 @@ export class UI {
 
   public static create(parent: HTMLElement, template: string | HTMLElement, model = {}, options = { parent: null, prepare: true, sibling: null }): UIView {
     if (typeof template == 'string') {
-      const container = document.createElement('div');
+      let doc = parent ?? document as any;
+      while (doc.parentNode != null) {
+        doc = doc.parentNode;
+      }
+      const container = doc.createElement('div');
       container.innerHTML = options.prepare ? UI.prepare(template) : template;
       template = container.firstElementChild as HTMLElement;
     }
