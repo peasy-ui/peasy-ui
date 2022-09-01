@@ -42,9 +42,10 @@ export class UIBinding {
 
   public get element(): Element {
     if (this.$element == null) {
-      this.$element = (this.selector instanceof Element) || (this.selector instanceof Text) || (this.selector instanceof Comment)
-        ? this.selector
-        : this.context.querySelector(this.selector);
+      this.$element = typeof this.selector === 'string' ? this.context.querySelector(this.selector) : this.selector;
+      // this.$element = (this.selector instanceof Element) || (this.selector instanceof Text) || (this.selector instanceof Comment)
+      //   ? this.selector
+      //   : this.context.querySelector(this.selector);
     }
     return this.$element;
   }
