@@ -90,12 +90,13 @@ Peasy UI uses the JavaScript/Typescript string interpolation syntax of `${ }` in
     ${ !== prop}        Binding that renders the element if model property is false or
                         nullish
 
-    ${alias <=* list}   Bindning from model list property to view template
-                        alias for each item in the list
+    ${alias <=* list(:key)} Bindning from model list property to view template
+                            alias for each item in the list. If key is provided
+                            property key will be used to decide item equality
 
     ${comp === (state)} Binding that renders component (property with type or instance)
-                        with a `template` and passes state, if component type, to 
-                        component's `create` method
+                        with a template and passes state, if component type, to 
+                        component's create method
 
 A combination of the string value binding and a binding for the `change` event can be used to capture and react to changes in radio buttons and selects.
 
@@ -139,6 +140,11 @@ const model = { list: ['one', 'two', 'three'] };
 
 ```ts
 const template = `<div \${object <=* list}>Item: \${object.id}</div>`;
+const model = { list: [{ id: 'one' }, { id: 'two' }, { id: 'three' }] };
+```
+
+```ts
+const template = `<div \${object <=* list:id}>Item: \${object.id}</div>`;
 const model = { list: [{ id: 'one' }, { id: 'two' }, { id: 'three' }] };
 ```
 

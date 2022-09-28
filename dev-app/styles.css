@@ -23,7 +23,8 @@ input {
 
 .item.pui-adding,
 /* .todo.pui-adding, */
-.header.pui-adding {
+.header.pui-adding,
+.player.pui-adding {
   /* color: green; */
   animation: fade-in 1s forwards;
 }
@@ -37,7 +38,8 @@ input {
 }
 .item.pui-removing,
 /* .todo.pui-removing, */
-.header.pui-removing {
+.header.pui-removing,
+.player.pui-removing {
   /* color: red; */
   animation: fade-out 1s forwards;
 }

@@ -13,6 +13,7 @@ export class UIBinding {
 
   public object: any;
   public property: string;
+  public arguments: string[];
 
   public context: any;
   public selector: string | Element | Node;
@@ -56,8 +57,12 @@ export class UIBinding {
   public static create(options: IUIBinding): UIBinding {
     const binding = new UIBinding();
 
+    const args = options.property?.split(':') ?? [];
+    const property = args.shift();
+
     binding.object = '$model' in options.object ? options.object : { $model: options.object };
-    binding.property = options.property;
+    binding.property = property;
+    binding.arguments = args;
     binding.context = options.context ?? document;
     binding.selector = options.selector;
     binding.attribute = options.attribute ?? 'innerText';
@@ -158,12 +163,21 @@ export class UIBinding {
           if (value == null) {
             value = [];
           }
+          const key = this.arguments[0];
           const lastValue = this.lastValue ?? [];
           if (value.length !== lastValue.length) {
             listChanged = true;
           } else {
             for (let i = 0, ii = value.length; i < ii; i++) {
-              if (value[i] !== lastValue[i]) {
+              let v, lv;
+              if (key == null) {
+                v = value[i];
+                lv = lastValue[i];
+              } else {
+                v = UI.resolveValue(value[i] ?? {}, key);
+                lv = UI.resolveValue(lastValue[i] ?? {}, key);
+              }
+              if (v !== lv) {
                 listChanged = true;
                 break;
               }
@@ -188,7 +202,15 @@ export class UIBinding {
           const lastUIValue = this.lastUIValue ?? [];
           let same = 0;
           for (let i = 0, ii = uiValue.length, j = 0; i < ii; i++, j++) {
-            if (uiValue[i] === lastUIValue[j]) {
+            let v, lv;
+            if (key == null) {
+              v = uiValue[i];
+              lv = lastUIValue[j];
+            } else {
+              v = UI.resolveValue(uiValue[i] ?? {}, key);
+              lv = UI.resolveValue(lastUIValue[j] ?? {}, key);
+            }
+            if (v === lv) {
               same++;
             }
             else {

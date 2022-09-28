@@ -114,7 +114,7 @@ async function main(): Promise<void> {
 
   UI.create(document.body, `
     <div class="main" style="background-color: \${|color}; transition-duration: \${|transitionDuration}ms;">
-      <div \${player <=* players}>
+      <div class="player" \${player <=* players:name}>
         <div>Name: \${player.name}</div>
         <div>Colors: <span \${playerColor <=* player.colors}> (\${player.name}) \${playerColor.c} </span></div>
       </div>
@@ -195,6 +195,14 @@ async function main(): Promise<void> {
   setTimeout(() => { model.list = model.list.filter(item => item !== 'three') }, 8000);
 
   setInterval(() => model.card.flip(), 2500);
+
+  setTimeout(() => {
+    model.players = [
+      { name: 'asdf', colors: [{ c: 'red' }, { c: 'green' }] },
+      { name: 'qwer', colors: [{ c: 'blue' }, { c: 'yellow' }] },
+      { name: 'jkl', colors: [{ c: 'green' }, { c: 'red' }] },
+    ];
+  }, 2500);
 
   // setInterval(() => {
   //   const item = itemsShift(model.slots);
