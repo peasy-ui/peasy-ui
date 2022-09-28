@@ -93,6 +93,10 @@ Peasy UI uses the JavaScript/Typescript string interpolation syntax of `${ }` in
     ${alias <=* list}   Bindning from model list property to view template
                         alias for each item in the list
 
+    ${comp === (state)} Binding that renders component (property with type or instance)
+                        with a `template` and passes state, if component type, to 
+                        component's `create` method
+
 A combination of the string value binding and a binding for the `change` event can be used to capture and react to changes in radio buttons and selects.
 
 ```ts
@@ -136,6 +140,28 @@ const model = { list: ['one', 'two', 'three'] };
 ```ts
 const template = `<div \${object <=* list}>Item: \${object.id}</div>`;
 const model = { list: [{ id: 'one' }, { id: 'two' }, { id: 'three' }] };
+```
+
+```ts
+class Greeting {
+  // Queried by parent to create markup
+  public static template = '<div>Hello, ${name}</div>';
+
+  // Called by parent to create model
+  public static create(state: { name: string }): Greeting {
+    return new Greeting(state.name);
+  }
+
+  public constructor(public name: string) { }
+}
+
+const template = `<div>
+        <\${Greeting === greet} \${greet <=* greets}>
+        <\${greetObject === }>
+    </div>`;
+const model = { Greeting, 
+                greets: [{ name: 'World' }, { name: 'Everyone' }], 
+                greetObject: { template: '<div>Hello, ${name}</div>', name: 'Someone' } };
 ```
 
 ### Additional features

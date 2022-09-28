@@ -22,7 +22,7 @@ input {
 }
 
 .item.pui-adding,
-.todo.pui-adding,
+/* .todo.pui-adding, */
 .header.pui-adding {
   /* color: green; */
   animation: fade-in 1s forwards;
@@ -36,7 +36,7 @@ input {
   }
 }
 .item.pui-removing,
-.todo.pui-removing,
+/* .todo.pui-removing, */
 .header.pui-removing {
   /* color: red; */
   animation: fade-out 1s forwards;
@@ -51,6 +51,14 @@ input {
 }
 .item.pui-moving {
   color: orange;
+}
+
+.todo.pui-adding,
+.todo.pui-removing {
+  opacity: 0;
+}
+.todo.pui-removing {
+  transition: opacity 300ms ease-in-out;
 }
 
 .ball {
@@ -102,6 +110,7 @@ input {
 }
 .todo {
   padding: 5px 0px;
+  transition: opacity 1s ease-in-out; /* Needs to be here for adding animation */
 }
 .done-todo {
   text-decoration: line-through;

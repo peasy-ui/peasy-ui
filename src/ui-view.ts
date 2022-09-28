@@ -23,7 +23,7 @@ export class UIView {
 
     view.model = model;
     view.element = template;
-    view.bindings.push(...UI.parse(view.element, model, view));
+    view.bindings.push(...UI.parse(view.element, model, view, options.parent));
     view.parentElement = parent;
     view.sibling = options.sibling;
 
@@ -91,7 +91,9 @@ export class UIView {
       case 'created':
         // console.log('[view] add', this.element, this.model);
         this.element.classList.add('pui-adding');
-        this.parentElement.insertBefore(this.element, this.sibling?.nextSibling);
+        if (!this.element.hasAttribute('PUI-UNRENDERED')) {
+          (this.parentElement ?? UI.parentElement(this.element, this.parent as UIBinding)).insertBefore(this.element, this.sibling?.nextSibling);
+        }
         this.attachResolve();
         this.state = 'attaching';
         break;
@@ -147,7 +149,7 @@ export class UIView {
         // ).then(() => {
         // if (this.element.getAnimations({ subtree: true }).length === 0) {
         if (this.getAnimations().length === 0) {
-          const parent = this.element.parentElement;
+          const parent = UI.parentElement(this.element, this.parent as UIBinding);
           console.log('[view] moving', this.element.nextSibling === this.sibling.nextSibling, '>', (this.element.nextSibling as any).cloneNode(), '<', (this.sibling.nextSibling as any).innerText)
           parent.insertBefore(this.element, this.sibling.nextSibling);
           this.element.classList.remove('pui-moving');

@@ -1,9 +1,11 @@
 import { UIAnimation } from './../src/ui-animation';
 import { UI } from "../src/index";
 import 'styles.css';
-import * as Template from './demo.html';
+import { MyComponent } from './my-component';
 
-console.log('Template', Template, Template.default);
+// import * as Template from './demo.html';
+
+// console.log('Template', Template, Template.default);
 
 
 window.addEventListener('DOMContentLoaded', (event) => {
@@ -18,9 +20,13 @@ async function main(): Promise<void> {
   let demoUI;
 
   const model = {
+    MyComponent,
+    models: [{ item: 1 }, { item: 3 }],
+    components: [MyComponent.create({ item: 1 }), MyComponent.create({ item: 3 })],
+    showComponents: true,
     players: [
-      { name: 'asdf', colors: ['red', 'green'] },
-      { name: 'qwer', colors: ['blue', 'yellow'] },
+      { name: 'asdf', colors: [{ c: 'red' }, { c: 'green' }] },
+      { name: 'qwer', colors: [{ c: 'blue' }, { c: 'yellow' }] },
     ],
     color: 'lightgray',
     drawerMessage: 'Any kind of message',
@@ -106,14 +112,18 @@ async function main(): Promise<void> {
 
   //       <div \${ ==> stateChanged ==> animationRun }>Stage changed test</div>
 
-
   UI.create(document.body, `
     <div class="main" style="background-color: \${|color}; transition-duration: \${|transitionDuration}ms;">
       <div \${player <=* players}>
         <div>Name: \${player.name}</div>
-        <div>Colors: <span \${playerColor <=* player.colors}> (\${player.name}) \${playerColor} </span></div>
+        <div>Colors: <span \${playerColor <=* player.colors}> (\${player.name}) \${playerColor.c} </span></div>
       </div>
-      <\${ MyComponent <== }/>
+      <div><label>Show components: <input type="checkbox" \${ checked <=> showComponents }></label></div>
+      <div>Global state: \${models[0].item}, \${models[1].item}</div>
+      <\${ components[0] === } \${ === showComponents }>
+      <\${ MyComponent === models[1] } \${ === showComponents }>
+      <\${ MyComponent === state } \${state <=* models}>
+      <\${ component === } \${component <=* components}>
       <div \${item <=* list} class="item" style="background-color: \${color};">Item: \${item} <button \${click @=> clicked}>Set to gold (\${item})</button></div>
       List: \${list[1]}
       <div>Color: <input \${value <=> color}> <span>The color is <b>\${color}</b>.</span> <button \${click @=> clicked} \${disabled <== hasNoColor}>Set to gold</button></div>

@@ -136,130 +136,140 @@ export class UIBinding {
     }
     let value = UI.resolveValue(this.object, this.property);
     let listChanged = false;
-    if (this.template != null) { // Conditional or iterator
-      if (typeof this.attribute === 'boolean') { // Conditional
-        value = (value ?? false) === false ? false : true;
-        if (value !== this.lastValue) {
-          const uiValue = this.toUI !== true ? (this.toUI as toUICallback)(value, this.lastValue, this.property, this.object) : value;
-          if (uiValue !== undefined && uiValue !== this.lastUIValue) {
-            // console.log('Updating toUI');
-            if (uiValue === this.attribute) {
-              this.views.push(UIView.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, this.object, { parent: this, prepare: false, sibling: this.element }));
-            } else {
-              const view = this.views.pop();
-              view?.destroy();
+    if (this.template != null) { // Component, conditional or iterator
+      if (this.template instanceof HTMLElement) { // Conditional or iterator
+        if (typeof this.attribute === 'boolean') { // Conditional
+          value = (value ?? false) === false ? false : true;
+          if (value !== this.lastValue) {
+            const uiValue = this.toUI !== true ? (this.toUI as toUICallback)(value, this.lastValue, this.property, this.object) : value;
+            if (uiValue !== undefined && uiValue !== this.lastUIValue) {
+              // console.log('Updating toUI');
+              if (uiValue === this.attribute) {
+                this.views.push(UIView.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, this.object, { parent: this, prepare: false, sibling: this.element }));
+              } else {
+                const view = this.views.pop();
+                view?.destroy();
+              }
+              this.lastValue = value;
+              this.lastUIValue = uiValue;
             }
-            this.lastValue = value;
-            this.lastUIValue = uiValue;
           }
-        }
-      } else { // Iterator
-        if (value == null) {
-          value = [];
-        }
-        const lastValue = this.lastValue ?? [];
-        if (value.length !== lastValue.length) {
-          listChanged = true;
-        } else {
-          for (let i = 0, ii = value.length; i < ii; i++) {
-            if (value[i] !== lastValue[i]) {
-              listChanged = true;
+        } else { // Iterator
+          if (value == null) {
+            value = [];
+          }
+          const lastValue = this.lastValue ?? [];
+          if (value.length !== lastValue.length) {
+            listChanged = true;
+          } else {
+            for (let i = 0, ii = value.length; i < ii; i++) {
+              if (value[i] !== lastValue[i]) {
+                listChanged = true;
+                break;
+              }
+            }
+          }
+          if (!listChanged) {
+            this.views.forEach(view => view.updateToUI());
+            if (this.oneTime) {
+              this.oneTimeDone();
+            }
+            return;
+          }
+
+          const uiValue = this.toUI !== true ? (this.toUI as toUICallback)(value, lastValue, this.property, this.object) : value;
+          if (uiValue == null) {
+            this.views.forEach(view => view.updateToUI());
+            if (this.oneTime) {
+              this.oneTimeDone();
+            }
+            return;
+          }
+          const lastUIValue = this.lastUIValue ?? [];
+          let same = 0;
+          for (let i = 0, ii = uiValue.length, j = 0; i < ii; i++, j++) {
+            if (uiValue[i] === lastUIValue[j]) {
+              same++;
+            }
+            else {
               break;
             }
           }
-        }
-        if (!listChanged) {
-          this.views.forEach(view => view.updateToUI());
-          if (this.oneTime) {
-            this.oneTimeDone();
+          if (same === uiValue.length && uiValue.length === lastUIValue.length) {
+            this.views.forEach(view => view.updateToUI());
+            if (this.oneTime) {
+              this.oneTimeDone();
+            }
+            return;
           }
-          return;
-        }
+          const views = this.views.splice(0, same);
+          let lastDoneUI = views[views.length - 1];
 
-        const uiValue = this.toUI !== true ? (this.toUI as toUICallback)(value, lastValue, this.property, this.object) : value;
-        if (uiValue == null) {
-          this.views.forEach(view => view.updateToUI());
-          if (this.oneTime) {
-            this.oneTimeDone();
-          }
-          return;
-        }
-        const lastUIValue = this.lastUIValue ?? [];
-        let same = 0;
-        for (let i = 0, ii = uiValue.length, j = 0; i < ii; i++, j++) {
-          if (uiValue[i] === lastUIValue[j]) {
-            same++;
-          }
-          else {
-            break;
-          }
-        }
-        if (same === uiValue.length && uiValue.length === lastUIValue.length) {
-          this.views.forEach(view => view.updateToUI());
-          if (this.oneTime) {
-            this.oneTimeDone();
-          }
-          return;
-        }
-        const views = this.views.splice(0, same);
-        let lastDoneUI = views[views.length - 1];
-
-        for (let i = same, ii = uiValue.length, j = same; i < ii; i++, j++) {
-          const item = uiValue[i];
-          if (typeof item !== 'string') {
-            item.$index = i;
-          }
-          // const lastDoneUI = views[views.length - 1];
-          const view = this.views.shift();
-          // New view
-          if (view == null) {
-            const model = { $model: { [this.attribute]: item }, $parent: this.object };
-            const view = UIView.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, model, { parent: this, prepare: false, sibling: lastDoneUI?.element ?? this.element });
-            views.push(view);
-            lastDoneUI = view;
-            continue;
-          }
-          // The same, continue
-          if (item === view?.model.$model[this.attribute]) {
-            views.push(view);
-            view.move(lastDoneUI?.element ?? this.element as HTMLElement);
-            lastDoneUI = view;
-            continue;
-          }
-          // Old view is gone
-          const uiItem = view?.model.$model[this.attribute];
-          if (!uiValue.slice(i).includes(uiItem)) {
-            view.destroy();
-            i--;
-            lastDoneUI = view;
-            continue;
-          }
-          // Moved view
-          this.views.unshift(view);
-          let found = false;
-          for (let j = 0, jj = this.views.length; j < jj; j++) {
-            const view = this.views[j];
-            if (item === view?.model.$model[this.attribute]) {
-              views.push(...this.views.splice(j, 1));
-
-              view.move(lastDoneUI?.element ?? this.element as HTMLElement);
-              found = true;
+          for (let i = same, ii = uiValue.length, j = same; i < ii; i++, j++) {
+            const item = uiValue[i];
+            if (typeof item !== 'string') {
+              item.$index = i;
+            }
+            // const lastDoneUI = views[views.length - 1];
+            const view = this.views.shift();
+            // New view
+            if (view == null) {
+              const model = { $model: { [this.attribute]: item }, $parent: this.object };
+              const view = UIView.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, model, { parent: this, prepare: false, sibling: lastDoneUI?.element ?? this.element });
+              views.push(view);
               lastDoneUI = view;
-              break;
+              continue;
+            }
+            // The same, continue
+            if (item === view?.model.$model[this.attribute]) {
+              views.push(view);
+              view.move(lastDoneUI?.element ?? this.element as HTMLElement);
+              lastDoneUI = view;
+              continue;
+            }
+            // Old view is gone
+            const uiItem = view?.model.$model[this.attribute];
+            if (!uiValue.slice(i).includes(uiItem)) {
+              view.destroy();
+              i--;
+              lastDoneUI = view;
+              continue;
+            }
+            // Moved view
+            this.views.unshift(view);
+            let found = false;
+            for (let j = 0, jj = this.views.length; j < jj; j++) {
+              const view = this.views[j];
+              if (item === view?.model.$model[this.attribute]) {
+                views.push(...this.views.splice(j, 1));
+
+                view.move(lastDoneUI?.element ?? this.element as HTMLElement);
+                found = true;
+                lastDoneUI = view;
+                break;
+              }
+            }
+            // New view
+            if (!found) {
+              const model = { $model: { [this.attribute]: item }, $parent: this.object };
+              const view = UIView.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, model, { parent: this, prepare: false, sibling: lastDoneUI?.element ?? this.element });
+              views.push(view);
+              lastDoneUI = view;
             }
           }
-          // New view
-          if (!found) {
-            const model = { $model: { [this.attribute]: item }, $parent: this.object };
-            const view = UIView.create(this.element.parentElement, this.template.cloneNode(true) as HTMLElement, model, { parent: this, prepare: false, sibling: lastDoneUI?.element ?? this.element });
-            views.push(view);
-            lastDoneUI = view;
-          }
+          this.views.forEach(view => view.destroy());
+          this.views = views;
+          this.lastValue = [...value];
+          this.lastUIValue = [...uiValue];
         }
-        this.views.forEach(view => view.destroy());
-        this.views = views;
-        this.lastValue = [...value];
-        this.lastUIValue = [...uiValue];
+      } else { // Component
+        if (this.value == null) {
+          const component = UI.resolveValue(this.object, this.attribute);
+          const template = component.template;
+          const model = value == null ? component : component.create(value);
+          this.value = value ?? component;
+          this.views.push(UI.create(this.element.parentElement, template, model, { parent: this, prepare: true, sibling: this.element }));
+        }
       }
     } else {
       if (value !== this.lastValue) {

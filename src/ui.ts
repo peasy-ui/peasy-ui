@@ -20,10 +20,10 @@ export class UI {
 
   public static create(parent: HTMLElement, template: string | HTMLElement, model = {}, options = { parent: null, prepare: true, sibling: null }): UIView {
     if (typeof template == 'string') {
-      let doc = parent ?? document as any;
-      while (doc.parentNode != null) {
-        doc = doc.parentNode;
-      }
+      const doc = parent?.ownerDocument ?? document; // as any;
+      // while (doc.parentNode != null) {
+      //   doc = doc.parentNode;
+      // }
       const container = doc.createElement('div');
       container.innerHTML = options.prepare ? UI.prepare(template) : template;
       template = container.firstElementChild as HTMLElement;
@@ -43,7 +43,7 @@ export class UI {
     return animation.play();
   }
 
-  public static parse(element: Element, object: any, parent = null): UIBinding[] {
+  public static parse(element: Element, object: any, view: UIView, parent): UIBinding[] {
     const bindings: UIBinding[] = [];
     if (element.nodeType === 3) { // text
       let text = element.textContent;
@@ -61,13 +61,13 @@ export class UI {
 
         let clone = element.cloneNode() as Element;
         element.textContent = first;
-        element.parentElement.insertBefore(clone, element.nextSibling);
-        bindings.push(UI.bind({ selector: clone, attribute: 'textContent', object, property, parent, oneTime }));
+        UI.parentElement(element, parent).insertBefore(clone, element.nextSibling);
+        bindings.push(UI.bind({ selector: clone, attribute: 'textContent', object, property, parent: view, oneTime }));
         element = clone;
 
         clone = element.cloneNode() as Element;
         clone.textContent = text;
-        element.parentElement.insertBefore(clone, element.nextSibling);
+        UI.parentElement(element, parent).insertBefore(clone, element.nextSibling);
         element = clone;
         match = text.match(UI.regexValue);
       }
@@ -104,8 +104,8 @@ export class UI {
               } else { // === or !== conditional
                 // type = 'conditional';
                 const comment = document.createComment(attr.name);
-                element.parentNode.insertBefore(comment, element);
-                element.parentNode.removeChild(element);
+                UI.parentNode(element, parent).insertBefore(comment, element);
+                UI.parentNode(element, parent).removeChild(element);
                 element.removeAttribute(attr.name);
                 template = element;
                 element = comment as unknown as Element;
@@ -115,11 +115,25 @@ export class UI {
                   oneTime = true;
                 }
               }
+            } else if (fromUI === '=' && toUI === '=') { // component === (state)
+              const parentNode = UI.parentNode(element, parent);
+              if (parentNode.nodeType !== 8) {
+                const comment = document.createComment(attr.name);
+                parentNode.insertBefore(comment, element);
+                parentNode.removeChild(element);
+                element.removeAttribute(attr.name);
+                element = comment as unknown as Element;
+              } else {
+                element = parentNode as unknown as Element;
+              }
+              template = name;
+              oneTime = true;
+              toUI = true;
             } else if (fromUI === '*') { // *=> event
               // type = 'event';
               const comment = document.createComment(attr.name);
-              element.parentNode.insertBefore(comment, element);
-              element.parentNode.removeChild(element);
+              UI.parentNode(element, parent).insertBefore(comment, element);
+              UI.parentNode(element, parent).removeChild(element);
               element.removeAttribute(attr.name);
               template = element;
               element = comment as unknown as Element;
@@ -134,7 +148,7 @@ export class UI {
             toUI: typeof toUI === 'string' ? toUI === '<' : toUI,
             fromUI: typeof fromUI === 'string' ? fromUI === '>' : fromUI,
             atEvent: toUI === '@',
-            parent,
+            parent: view,
             oneTime,
           })];
         }
@@ -170,7 +184,7 @@ export class UI {
               }).join('');
               element.setAttribute(attr.name, value);
             },
-            parent,
+            parent: view,
           }));
           parts[index++] = before;
           parts[index++] = property;
@@ -200,7 +214,7 @@ export class UI {
         }
       }
 
-      bindings.push(...Array.from(element.childNodes).map(child => UI.parse(child as HTMLElement, object, parent)).flat());
+      bindings.push(...Array.from(element.childNodes).map(child => UI.parse(child as HTMLElement, object, view, parent)).flat());
     }
     return bindings;
   }
@@ -272,6 +286,28 @@ export class UI {
     } while (object != null && guard++ < 1000);
   }
 
+  public static parentElement(element: Element, parent: UIView | UIBinding | null): HTMLElement {
+    const parentElement = element.parentElement;
+    if (parentElement != null) {
+      return parentElement;
+    }
+    while (parent != null && (parent.element == null || parent.element === element)) {
+      parent = parent.parent as UIView | UIBinding;
+    }
+    return parent?.element as HTMLElement;
+  }
+
+  public static parentNode(element: Element, parent: UIView | UIBinding | null): Node {
+    const parentNode = element.parentNode;
+    if (parentNode != null) {
+      return parentNode;
+    }
+    while (parent != null && (parent.element == null || parent.element === element)) {
+      parent = parent.parent as UIView | UIBinding;
+    }
+    return parent?.element;
+  }
+
   private static prepare(template: string): string {
     // const original = template;
     let remaining = template;
@@ -279,8 +315,12 @@ export class UI {
     let match = remaining.match(UI.regexReplace);
     while (match != null) {
       const [_ignore, before, binding, after] = match;
-      template += `${before} PUI.${UI.bindingCounter++}="${binding}" `;
-      // console.log('BINDING', binding);
+      if (binding.match(/\S\s*===/)) {
+        // Use BR tag since it doesn't require closing tag (won't be rendered)
+        template += `${before.trimEnd()}br PUI-UNRENDERED PUI.${UI.bindingCounter++}="${binding}"`;
+      } else {
+        template += `${before} PUI.${UI.bindingCounter++}="${binding}" `;
+      }
       remaining = after;
       match = remaining.match(UI.regexReplace);
     }
