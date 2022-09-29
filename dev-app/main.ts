@@ -114,10 +114,15 @@ async function main(): Promise<void> {
 
   UI.create(document.body, `
     <div class="main" style="background-color: \${|color}; transition-duration: \${|transitionDuration}ms;">
-      <div class="player" \${player <=* players:name}>
-        <div>Name: \${player.name}</div>
-        <div>Colors: <span \${playerColor <=* player.colors}> (\${player.name}) \${playerColor.c} </span></div>
+      <div class="player" \${player <=* players}>
+        <div>Name: \${player.name} - colors: <span \${playerColor <=* player.colors}> (\${player.name}) \${playerColor.c} </span></div>
       </div>
+      <hr>
+      <div class="player" \${player <=* players:name}>
+        <div>Name: \${player.name} - colors: <span \${playerColor <=* player.colors}> (\${player.name}) \${playerColor.c} </span></div>
+      </div>
+      <hr>
+      <div style="height: 2px"></div>
       <div><label>Show components: <input type="checkbox" \${ checked <=> showComponents }></label></div>
       <div>Global state: \${models[0].item}, \${models[1].item}</div>
       <\${ components[0] === } \${ === showComponents }>
@@ -203,6 +208,21 @@ async function main(): Promise<void> {
       { name: 'jkl', colors: [{ c: 'green' }, { c: 'red' }] },
     ];
   }, 2500);
+  setTimeout(() => {
+    model.players = [
+      { name: 'asdf', colors: [{ c: 'red' }, { c: 'green' }] },
+      { name: 'jkl', colors: [{ c: 'green' }, { c: 'red' }] },
+    ];
+  }, 6000);
+  setTimeout(() => {
+    model.players = [
+      { name: 'jkl', colors: [{ c: 'green' }, { c: 'red' }] },
+      { name: 'asdf', colors: [{ c: 'red' }, { c: 'green' }] },
+      { name: 'qwer', colors: [{ c: 'blue' }, { c: 'yellow' }] },
+    ];
+  }, 9500);
+
+
 
   // setInterval(() => {
   //   const item = itemsShift(model.slots);

@@ -150,7 +150,7 @@ export class UIView {
         // if (this.element.getAnimations({ subtree: true }).length === 0) {
         if (this.getAnimations().length === 0) {
           const parent = UI.parentElement(this.element, this.parent as UIBinding);
-          console.log('[view] moving', this.element.nextSibling === this.sibling.nextSibling, '>', (this.element.nextSibling as any).cloneNode(), '<', (this.sibling.nextSibling as any).innerText)
+          // console.log('[view] moving', this.element.nextSibling === this.sibling.nextSibling, '>', (this.element.nextSibling as any).cloneNode(), '<', (this.sibling.nextSibling as any).innerText)
           parent.insertBefore(this.element, this.sibling.nextSibling);
           this.element.classList.remove('pui-moving');
           this.moved = '';

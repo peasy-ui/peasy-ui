@@ -242,16 +242,22 @@ export class UIBinding {
               lastDoneUI = view;
               continue;
             }
+            const itemKey = key == null ? item : UI.resolveValue(item ?? {}, key);
+            const uiItem = view?.model.$model[this.attribute];
+            const uiItemKey = key == null ? uiItem : UI.resolveValue(uiItem ?? {}, key);
+
             // The same, continue
-            if (item === view?.model.$model[this.attribute]) {
+            if (itemKey === uiItemKey) {
               views.push(view);
               view.move(lastDoneUI?.element ?? this.element as HTMLElement);
               lastDoneUI = view;
               continue;
             }
             // Old view is gone
-            const uiItem = view?.model.$model[this.attribute];
-            if (!uiValue.slice(i).includes(uiItem)) {
+            if (!uiValue.slice(i)
+              .map(value => key == null ? value : UI.resolveValue(value ?? {}, key))
+              .includes(uiItemKey)
+            ) {
               view.destroy();
               i--;
               lastDoneUI = view;
@@ -262,9 +268,10 @@ export class UIBinding {
             let found = false;
             for (let j = 0, jj = this.views.length; j < jj; j++) {
               const view = this.views[j];
-              if (item === view?.model.$model[this.attribute]) {
+              const uiItem = view?.model.$model[this.attribute];
+              const uiItemKey = key == null ? uiItem : UI.resolveValue(uiItem ?? {}, key);
+              if (itemKey === uiItemKey) {
                 views.push(...this.views.splice(j, 1));
-
                 view.move(lastDoneUI?.element ?? this.element as HTMLElement);
                 found = true;
                 lastDoneUI = view;

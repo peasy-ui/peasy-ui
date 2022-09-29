@@ -25,8 +25,8 @@ input {
 /* .todo.pui-adding, */
 .header.pui-adding,
 .player.pui-adding {
-  /* color: green; */
-  animation: fade-in 1s forwards;
+  color: green;
+  animation: fade-in 2s forwards;
 }
 @keyframes fade-in {
   0% {
@@ -40,8 +40,8 @@ input {
 /* .todo.pui-removing, */
 .header.pui-removing,
 .player.pui-removing {
-  /* color: red; */
-  animation: fade-out 1s forwards;
+  color: red;
+  animation: fade-out 2s forwards;
 }
 @keyframes fade-out {
   0% {
@@ -51,8 +51,18 @@ input {
     opacity: 0;
   }
 }
-.item.pui-moving {
+.item.pui-moving,
+.player.pui-moving {
   color: orange;
+  animation: delay 400ms;
+}
+@keyframes delay {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 .todo.pui-adding,
