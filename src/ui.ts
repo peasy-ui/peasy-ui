@@ -19,11 +19,14 @@ export class UI {
   private static bindingCounter = 0;
 
   public static create(parent: HTMLElement, template: string | HTMLElement, model = {}, options = { parent: null, prepare: true, sibling: null }): UIView {
-    if (typeof template == 'string') {
+    if (typeof template === 'string') {
       const doc = parent?.ownerDocument ?? document; // as any;
       // while (doc.parentNode != null) {
       //   doc = doc.parentNode;
       // }
+      if (template.startsWith('#')) {
+        template = doc.querySelector(template).innerHTML;
+      }
       const container = doc.createElement('div');
       container.innerHTML = options.prepare ? UI.prepare(template) : template;
       template = container.firstElementChild as HTMLElement;
@@ -166,7 +169,7 @@ export class UI {
             selector: element,
             attribute: attr.name,
             object, property, oneTime,
-            toUI(newValue: any, _oldValue: any, name: string, model: any): void {
+            toUI(newValue: any, _oldValue: any, name: string, model: any): any {
               if (this.oneTime) {
                 // console.log('PARTS', name, parts, this);
                 const index = parts.indexOf(name);
@@ -183,6 +186,7 @@ export class UI {
                 return UI.resolveValue(model, part);
               }).join('');
               element.setAttribute(attr.name, value);
+              return newValue; // Might also be value, to observe the entire output
             },
             parent: view,
           }));
