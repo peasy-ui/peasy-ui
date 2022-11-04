@@ -186,7 +186,7 @@ export class UI {
                 return UI.resolveValue(model, part);
               }).join('');
               element.setAttribute(attr.name, value);
-              return newValue; // Might also be value, to observe the entire output
+              return value;
             },
             parent: view,
           }));
