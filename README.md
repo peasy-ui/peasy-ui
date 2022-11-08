@@ -192,3 +192,7 @@ requestAnimationFrame(tick);
 ## Development and contributing
 
 If you're interested in contributing, please see the [development guidelines](DEVELOPMENT.md).
+
+## Joining the community
+
+If you want to keep up with the latest and greatest about Peasy UI, or if you have questions or opinions about it, please come [join our discord](https://discord.gg/CDWn6Uq7). We'd love to hear from you!
