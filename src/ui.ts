@@ -4,6 +4,7 @@ import { UIView } from "./ui-view";
 
 export class UI {
   // public static bindings: Record<string, UIBinding> = {};
+  private static initialized = false;
   public static id = 0;
 
   public static views: UIView[] = [];
@@ -17,6 +18,22 @@ export class UI {
   private static regexValue = /(?<before>[\S\s]*?)\$\{\s*(?<property>[\s\S]*?)\s*\}(?<after>[\S\s]*)/m;
 
   private static bindingCounter = 0;
+
+  public static initialize(rafOrInterval: boolean | number = true): void {
+    UI.initialized = true;
+    if (rafOrInterval === false) {
+      return;
+    }
+    if (rafOrInterval === true) {
+      const tick = () => {
+        UI.update();
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+      return;
+    }
+    setInterval(() => UI.update(), 1000 / rafOrInterval);
+  }
 
   public static create(parent: HTMLElement, template: string | HTMLElement, model = {}, options = { parent: null, prepare: true, sibling: null }): UIView {
     if (typeof template === 'string') {
@@ -34,6 +51,9 @@ export class UI {
     const view = UIView.create(parent, template, model, options);
     if (view.parent === UI) {
       UI.views.push(view);
+    }
+    if (!UI.initialized) {
+      UI.initialize();
     }
     return view;
   }

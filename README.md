@@ -8,7 +8,7 @@ Peasy UI provides uncomplicated UI bindings for HTML via string templating. It's
 
 ## First look
 
-In Peasy UI, an HTML template is combined with a JavaScript/Typescript object, the model, into a `UI View` that's added to an element. By calling `update()` on the view, typically after updating the model or in a recurring (game) loop, the one-way, two-way and event bindings will sync state between the UI and the model.
+In Peasy UI, an HTML template is combined with a JavaScript/Typescript object, the model, into a `UI View` that's added to an element. Peasy UI will then sync state between the UI and the model according to the one-way, two-way and event bindings. For a more exact control over when the state is synced, the `update()` method can be called manually, typically after updating the model or in a recurring (game) loop, .
 
 ```ts
 const template = `
@@ -23,10 +23,8 @@ const model = {
 };
 
 const view = UI.create(document.body, template, model);
-
-setInterval(() => UI.update(), 1000 / 30);
 ```
-This example creates a two-way bound input field where whatever color is typed in is displayed in a span with that background color. When the button Gold is clicked, the click event binding will update the color property in the model which in turn will update all bindings in the view. The update in the `setInterval` at the end causes the bindings to be checked and updated 30 times per second.
+This example creates a two-way bound input field where whatever color is typed in is displayed in a span with that background color. When the button Gold is clicked, the click event binding will update the color property in the model which in turn will update all bindings in the view.
 
 ## Getting started
 
@@ -54,7 +52,6 @@ If you don't have a build process or don't want to install it, use a `script` ta
 
     setInterval(() => {
       model.timer++;
-      UI.update();
     }, 1000);
   </script>
 </body>
@@ -172,7 +169,25 @@ const model = { Greeting,
 
 ### Additional features
 
+#### Awaiting animations
+
 Peasy UI will not detach/remove an `UIView` with elements that have an active animation on them, so there's no need to await the end of any removal activations before destroying an `UIView`.
+
+#### Control updates
+
+Peasy UI will by default use `requestAnimationFrame` for updates. By calling `UI.initialize` before any other `UI` method a number can be provided to set updates per second or `false` to prevent Peasy UI from doing any automatic updates at all.
+
+```ts
+UI.initialize(false);
+
+const tick = () => {
+    doSomething();
+    UI.update();
+    doSomethingElse();
+    requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+```
 
 ## Development and contributing
 
