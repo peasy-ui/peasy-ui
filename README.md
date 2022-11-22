@@ -12,14 +12,16 @@ In Peasy UI, an HTML template is combined with a JavaScript/Typescript object, t
 
 ```ts
 const template = `
-    Color: <input \${value <=> color}>
-    <span style="background-color: \${color}">\${color}</span>
-    <button \${click @=> clicked}>Gold</button>
+    <div>
+        Color: <input \${value <=> color}>
+        <span style="background-color: \${color}">\${color}</span>
+        <button \${click @=> clicked}>Gold</button>
+    </div>
     `;
 
 const model = {
-    color: 'red';
-    clicked: () => model.color = 'gold';
+    color: 'red',
+    clicked: () => model.color = 'gold',
 };
 
 const view = UI.create(document.body, template, model);
@@ -103,7 +105,7 @@ const template = `
     <input type="radio" \${'green' ==> color} \${change @=> changedColor}> Green
     `;
 const model = {
-    color: 'red';
+    color: 'red',
     changedColor: (event, model) => alert(`Changed color to ${model.color}.`),
 };
 ```
@@ -116,7 +118,7 @@ const template = `
     </select>
     `;
 const model = {
-    color: 'red';
+    color: 'red',
     changedColor: (event, model) => alert(`Changed color to ${model.color}.`),
 };
 ```
